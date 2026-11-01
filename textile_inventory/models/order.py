@@ -85,7 +85,8 @@ class TextileOrder(models.Model):
         string='Woven, Not Yet Rolled (m)', compute='_compute_progress',
         help='Good fabric produced minus finished rolls. A negative value '
              'means more was rolled than was recorded as produced.')
-    dispatch_ids = fields.One2many('textile.dispatch', 'order_id', string='Dispatches')
+    dispatch_ids = fields.Many2many(
+        'textile.dispatch', string='Dispatches', compute='_compute_dispatches')
     fabric_stock_m = fields.Float(
         string='Finished Stock (m)', compute='_compute_progress',
         help='Confirmed rolls still in the godown (not yet dispatched).')
@@ -99,7 +100,7 @@ class TextileOrder(models.Model):
         string='Missing at Mill (m)', compute='_compute_progress')
     mill_pending_m = fields.Float(
         string='Not Yet Checked by Mill (m)', compute='_compute_progress')
-    dispatch_count = fields.Integer(compute='_compute_counts')
+    dispatch_count = fields.Integer(compute='_compute_dispatches')
     production_count = fields.Integer(compute='_compute_counts')
     roll_count = fields.Integer(compute='_compute_counts')
     yarn_receipt_count = fields.Integer(compute='_compute_counts')
@@ -119,10 +120,10 @@ class TextileOrder(models.Model):
         'production_ids.state', 'production_ids.good_metres',
         'production_ids.metres_damaged', 'production_ids.metres_waste',
         'production_ids.metres_rejected',
-        'roll_ids.state', 'roll_ids.length_m',
-        'dispatch_ids.state', 'dispatch_ids.total_metres',
-        'dispatch_ids.reconciliation_state', 'dispatch_ids.mill_accepted_m',
-        'dispatch_ids.mill_rejected_m', 'dispatch_ids.mill_missing_m',
+        'roll_ids.state', 'roll_ids.length_m', 'roll_ids.dispatch_id',
+        'roll_ids.dispatch_id.state', 'roll_ids.dispatch_id.total_metres',
+        'roll_ids.dispatch_id.reconciliation_state', 'roll_ids.dispatch_id.mill_accepted_m',
+        'roll_ids.dispatch_id.mill_rejected_m', 'roll_ids.dispatch_id.mill_missing_m',
     )
     def _compute_progress(self):
         for order in self:
@@ -149,22 +150,38 @@ class TextileOrder(models.Model):
             order.fabric_unrolled_m = order.fabric_produced_m - order.fabric_rolled_m
             order.fabric_stock_m = sum(
                 rolls.filtered(lambda r: r.state == 'available').mapped('length_m'))
-            sent = order.dispatch_ids.filtered(lambda d: d.state == 'dispatched')
-            checked = sent.filtered(lambda d: d.reconciliation_state in ('matched', 'discrepancy'))
-            order.fabric_dispatched_m = sum(sent.mapped('total_metres'))
-            order.mill_accepted_m = sum(checked.mapped('mill_accepted_m'))
-            order.mill_rejected_m = sum(checked.mapped('mill_rejected_m'))
-            order.mill_missing_m = sum(checked.mapped('mill_missing_m'))
-            order.mill_pending_m = sum(
-                (sent - checked).mapped('total_metres'))
+            # The mill reports one total per load. When a load carries several
+            # orders, each order gets its share by metres sent.
+            sent_m = accepted = rejected = missing = pending = 0.0
+            for disp in order.dispatch_ids.filtered(lambda d: d.state == 'dispatched'):
+                mine = sum(disp.roll_ids.filtered(
+                    lambda r: r.order_id == order).mapped('length_m'))
+                sent_m += mine
+                if disp.reconciliation_state in ('matched', 'discrepancy') and disp.total_metres:
+                    share = mine / disp.total_metres
+                    accepted += disp.mill_accepted_m * share
+                    rejected += disp.mill_rejected_m * share
+                    missing += disp.mill_missing_m * share
+                else:
+                    pending += mine
+            order.fabric_dispatched_m = sent_m
+            order.mill_accepted_m = accepted
+            order.mill_rejected_m = rejected
+            order.mill_missing_m = missing
+            order.mill_pending_m = pending
+
+    @api.depends('roll_ids.dispatch_id')
+    def _compute_dispatches(self):
+        for order in self:
+            order.dispatch_ids = order.roll_ids.dispatch_id
+            order.dispatch_count = len(order.dispatch_ids)
 
     @api.depends('yarn_receipt_ids', 'pavu_receipt_ids', 'allocation_ids',
-                 'production_ids', 'roll_ids', 'dispatch_ids')
+                 'production_ids', 'roll_ids')
     def _compute_counts(self):
         for order in self:
             order.production_count = len(order.production_ids)
             order.roll_count = len(order.roll_ids)
-            order.dispatch_count = len(order.dispatch_ids)
             order.yarn_receipt_count = len(order.yarn_receipt_ids)
             order.pavu_receipt_count = len(order.pavu_receipt_ids)
             order.allocation_count = len(order.allocation_ids)
@@ -269,7 +286,12 @@ class TextileOrder(models.Model):
         return self._open_list('Production Entries', 'textile.production')
 
     def action_view_dispatches(self):
-        return self._open_list('Dispatches', 'textile.dispatch')
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window', 'name': 'Dispatches',
+            'res_model': 'textile.dispatch', 'view_mode': 'list,form',
+            'domain': [('id', 'in', self.dispatch_ids.ids)],
+        }
 
     def action_view_rolls(self):
         return self._open_list('Fabric Rolls', 'textile.fabric.roll')

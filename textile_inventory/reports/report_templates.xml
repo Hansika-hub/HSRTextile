@@ -28,19 +28,20 @@
                                 <td><strong>Driver:</strong> <span t-field="o.driver_name"/> <span t-field="o.driver_phone"/></td>
                             </tr>
                             <tr>
-                                <td><strong>Order:</strong> <span t-field="o.order_id.name"/> (<span t-field="o.vendor_ref"/>)</td>
+                                <td><strong>Orders:</strong> <span t-field="o.order_names"/></td>
                                 <td><strong>Destination:</strong> <span t-field="o.destination"/></td>
                             </tr>
                         </table>
                         <table class="table table-sm table-bordered">
                             <thead>
-                                <tr><th>#</th><th>Roll No.</th><th>Date woven</th><th class="text-end">Length (m)</th></tr>
+                                <tr><th>#</th><th>Roll No.</th><th>Order</th><th>Date woven</th><th class="text-end">Length (m)</th></tr>
                             </thead>
                             <tbody>
                                 <t t-foreach="o.roll_ids.sorted('name')" t-as="roll">
                                     <tr>
                                         <td><t t-out="roll_index + 1"/></td>
                                         <td><span t-field="roll.name"/></td>
+                                        <td><span t-field="roll.order_id.name"/></td>
                                         <td><span t-field="roll.date"/></td>
                                         <td class="text-end"><span t-field="roll.length_m"/></td>
                                     </tr>
@@ -48,7 +49,7 @@
                             </tbody>
                             <tfoot>
                                 <tr>
-                                    <td colspan="3"><strong>Total: <span t-field="o.roll_count"/> rolls</strong></td>
+                                    <td colspan="4"><strong>Total: <span t-field="o.roll_count"/> rolls</strong></td>
                                     <td class="text-end"><strong><span t-field="o.total_metres"/> m</strong></td>
                                 </tr>
                             </tfoot>
@@ -89,7 +90,7 @@
                                 <td><strong>Vehicle:</strong> <span t-field="o.dispatch_id.vehicle_no"/></td>
                             </tr>
                             <tr>
-                                <td><strong>Order:</strong> <span t-field="o.order_id.name"/></td>
+                                <td><strong>Orders:</strong> <span t-field="o.order_names"/></td>
                                 <td><strong>Mill receipt no.:</strong> <span t-field="o.mill_ref"/></td>
                             </tr>
                             <tr>

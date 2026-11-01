@@ -4,13 +4,14 @@ from odoo import Command, api, fields, models
 from odoo.exceptions import UserError, ValidationError
 from odoo.tools import float_is_zero
 
-DISPATCH_LOCKED = ('order_id', 'roll_ids')
+DISPATCH_LOCKED = ('partner_id', 'roll_ids')
 RECON_LOCKED = ('dispatch_id', 'date', 'rolls_received', 'accepted_m', 'rejected_m')
 
 
 class TextileDispatch(models.Model):
     """One vehicle load of finished fabric rolls going to the mill.
-    ASSUMPTION (to confirm): one dispatch carries rolls of ONE vendor order."""
+    A load belongs to ONE vendor but may carry rolls of several of that
+    vendor's orders (confirmed by the owner)."""
 
     _name = 'textile.dispatch'
     _description = 'Fabric Dispatch'
@@ -22,13 +23,11 @@ class TextileDispatch(models.Model):
         string='Dispatch Date', required=True, tracking=True,
         default=fields.Date.context_today,
     )
-    order_id = fields.Many2one(
-        'textile.order', string='Vendor Order', required=True, tracking=True,
-        domain=[('state', '=', 'open')],
-    )
     partner_id = fields.Many2one(
-        related='order_id.partner_id', string='Vendor / Mill', store=True)
-    vendor_ref = fields.Char(related='order_id.order_ref', string='Vendor Order Ref.')
+        'res.partner', string='Vendor / Mill', required=True, tracking=True)
+    order_ids = fields.Many2many(
+        'textile.order', string='Orders in this Load', compute='_compute_orders')
+    order_names = fields.Char(string='Orders', compute='_compute_orders')
     destination = fields.Char(string='Destination', required=True, tracking=True)
     vehicle_no = fields.Char(string='Vehicle No.', required=True, tracking=True)
     driver_name = fields.Char(string='Driver Name', tracking=True)
@@ -62,6 +61,13 @@ class TextileDispatch(models.Model):
         string='Mill Rejected (m)', compute='_compute_reconciliation', store=True)
     mill_missing_m = fields.Float(
         string='Missing (m)', compute='_compute_reconciliation', store=True)
+
+    @api.depends('roll_ids.order_id')
+    def _compute_orders(self):
+        for dispatch in self:
+            orders = dispatch.roll_ids.order_id
+            dispatch.order_ids = orders
+            dispatch.order_names = ', '.join(orders.mapped('name'))
 
     @api.depends('roll_ids.length_m')
     def _compute_totals(self):
@@ -116,17 +122,18 @@ class TextileDispatch(models.Model):
         for dispatch in self:
             if dispatch.state != 'draft':
                 raise UserError('This dispatch is already confirmed.')
-            dispatch._textile_check_order(dispatch.order_id, False)
-            if not (dispatch.vehicle_no or '').strip():
-                raise UserError('The vehicle number is required.')
             if not dispatch.roll_ids:
                 raise UserError('Add at least one fabric roll to the dispatch.')
+            for order in dispatch.roll_ids.order_id:
+                dispatch._textile_check_order(order, dispatch.partner_id)
+            if not (dispatch.vehicle_no or '').strip():
+                raise UserError('The vehicle number is required.')
             dispatch.roll_ids._textile_lock()
             bad = dispatch.roll_ids.filtered(
-                lambda r: r.state != 'available' or r.order_id != dispatch.order_id)
+                lambda r: r.state != 'available' or r.order_id.partner_id != dispatch.partner_id)
             if bad:
                 raise UserError(
-                    'These rolls are not in stock or belong to another order: %s'
+                    'These rolls are not in stock or belong to another vendor: %s'
                     % ', '.join(bad.mapped('name')))
             finished = self.env.ref('textile_inventory.location_finished_fabric')
             customers = self.env.ref('stock.stock_location_customers')
@@ -139,8 +146,8 @@ class TextileDispatch(models.Model):
                 uom = dispatch._textile_check_product(
                     product, 'uom.product_uom_meter', 'm')
                 pickings |= dispatch._textile_transfer(
-                    warehouse.out_type_id, dispatch.order_id.partner_id,
-                    '%s / %s' % (dispatch.name, dispatch.order_id.name),
+                    warehouse.out_type_id, dispatch.partner_id,
+                    dispatch.name,
                     product, qty, uom, finished, customers)
             dispatch.roll_ids.write({'state': 'dispatched', 'dispatch_id': dispatch.id})
             dispatch.write({'state': 'dispatched',
@@ -209,7 +216,7 @@ class TextileReconciliation(models.Model):
     dispatch_id = fields.Many2one(
         'textile.dispatch', string='Dispatch', required=True, tracking=True,
         domain=[('state', '=', 'dispatched')], ondelete='restrict')
-    order_id = fields.Many2one(related='dispatch_id.order_id', store=True)
+    order_names = fields.Char(related='dispatch_id.order_names', string='Orders')
     partner_id = fields.Many2one(related='dispatch_id.partner_id', store=True)
     date = fields.Date(
         string='Mill Receipt Date', required=True, tracking=True,

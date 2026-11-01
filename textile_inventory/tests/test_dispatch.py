@@ -18,10 +18,10 @@ class TestDispatch(TransactionCase):
         cls.finished = cls.env.ref('textile_inventory.location_finished_fabric')
         cls.counter = 0
 
-    def _order(self):
+    def _order(self, vendor=None):
         type(self).counter += 1
         order = self.env['textile.order'].create({
-            'order_ref': 'T5-%s' % self.counter, 'partner_id': self.vendor.id,
+            'order_ref': 'T5-%s' % self.counter, 'partner_id': (vendor or self.vendor).id,
             'required_fabric_m': 5000})
         order.action_confirm()
         return order
@@ -44,7 +44,7 @@ class TestDispatch(TransactionCase):
         return rolls
 
     def _dispatch(self, order, rolls, **kw):
-        vals = {'order_id': order.id, 'destination': 'Mill', 'vehicle_no': 'TN01AB1234',
+        vals = {'partner_id': order.partner_id.id, 'destination': 'Mill', 'vehicle_no': 'TN01AB1234',
                 'roll_ids': [Command.set(rolls.ids)]}
         vals.update(kw)
         return self.env['textile.dispatch'].create(vals)
@@ -76,10 +76,10 @@ class TestDispatch(TransactionCase):
             self._dispatch(order, self.env['textile.fabric.roll']).action_confirm()   # no rolls
         with self.assertRaises(UserError):
             self._dispatch(order, rolls, vehicle_no='  ').action_confirm()            # no vehicle
-        other = self._order()
+        other = self._order(vendor=self.env['res.partner'].create({'name': 'T5 Other Vendor'}))
         foreign = self._rolls(other, [132])
         with self.assertRaises(UserError):
-            self._dispatch(order, foreign).action_confirm()                           # other order
+            self._dispatch(order, foreign).action_confirm()                           # other vendor
         draft_roll = self.env['textile.fabric.roll'].create({
             'order_id': order.id, 'product_id': self.fabric.id, 'length_m': 133,
             'production_ids': [Command.set(rolls[0].production_ids.ids)]})
@@ -97,6 +97,20 @@ class TestDispatch(TransactionCase):
             disp.unlink()
         with self.assertRaises(UserError):
             order.action_cancel()
+
+    def test_two_orders_same_vendor_one_load(self):
+        o1, o2 = self._order(), self._order()
+        r1, r2 = self._rolls(o1, [130, 140]), self._rolls(o2, [135])
+        disp = self._dispatch(o1, r1 | r2)
+        disp.action_confirm()
+        self.assertEqual(disp.order_ids, o1 | o2)
+        self.assertEqual((o1.fabric_dispatched_m, o2.fabric_dispatched_m), (270, 135))
+        self.assertEqual((o1.dispatch_count, o2.dispatch_count), (1, 1))
+        rec = self._recon(disp, rolls_received=3, accepted_m=390, rejected_m=0)
+        rec.action_confirm()
+        self.assertEqual(round(o1.mill_accepted_m, 2), 260)       # 2/3 of 390
+        self.assertEqual(round(o2.mill_accepted_m, 2), 130)
+        self.assertEqual(round(o1.mill_missing_m + o2.mill_missing_m, 2), 15)
 
     def test_closed_order_cannot_dispatch(self):
         order = self._order()
@@ -202,7 +216,7 @@ class TestDispatch(TransactionCase):
         supervisor = user('t5_sup', 'textile_inventory.group_textile_supervisor')
         order = self._order()
         rolls = self._rolls(order, [130])
-        vals = {'order_id': order.id, 'destination': 'Mill', 'vehicle_no': 'TN01',
+        vals = {'partner_id': order.partner_id.id, 'destination': 'Mill', 'vehicle_no': 'TN01',
                 'roll_ids': [Command.set(rolls.ids)]}
         disp = self.env['textile.dispatch'].with_user(manager).create(vals)
         with self.assertRaises(AccessError):

@@ -10,8 +10,8 @@
                   decoration-success="reconciliation_state == 'matched'">
                 <field name="name"/>
                 <field name="date"/>
-                <field name="order_id"/>
                 <field name="partner_id"/>
+                <field name="order_names"/>
                 <field name="destination"/>
                 <field name="vehicle_no"/>
                 <field name="roll_count" sum="Rolls"/>
@@ -50,9 +50,8 @@
                     <group>
                         <group string="Load">
                             <field name="date" readonly="state != 'draft'"/>
-                            <field name="order_id" options="{'no_create': True}" readonly="state != 'draft'"/>
-                            <field name="partner_id"/>
-                            <field name="vendor_ref"/>
+                            <field name="partner_id" options="{'no_create': True}" readonly="state != 'draft'"/>
+                            <field name="order_names"/>
                             <field name="destination" readonly="state != 'draft'"/>
                         </group>
                         <group string="Vehicle">
@@ -77,9 +76,10 @@
                         <page string="Fabric Rolls" name="rolls">
                             <field name="roll_ids" readonly="state != 'draft'"
                                    options="{'no_create': True}"
-                                   domain="[('state', '=', 'available'), ('order_id', '=', order_id)]">
+                                   domain="[('state', '=', 'available'), ('order_id.partner_id', '=', partner_id)]">
                                 <list>
                                     <field name="name"/>
+                                    <field name="order_id"/>
                                     <field name="date"/>
                                     <field name="length_m" sum="Total"/>
                                 </list>
@@ -105,7 +105,7 @@
             <search>
                 <field name="name"/>
                 <field name="vehicle_no"/>
-                <field name="order_id"/>
+                <field name="roll_ids" string="Roll No."/>
                 <field name="partner_id"/>
                 <field name="destination"/>
                 <filter name="draft" string="Draft" domain="[('state','=','draft')]"/>
@@ -113,7 +113,7 @@
                 <filter name="pending" string="Awaiting Mill" domain="[('reconciliation_state','=','pending')]"/>
                 <filter name="disc" string="With Discrepancy" domain="[('reconciliation_state','=','discrepancy')]"/>
                 <group>
-                    <filter name="by_order" string="Order" context="{'group_by': 'order_id'}"/>
+                    <filter name="by_vendor" string="Vendor" context="{'group_by': 'partner_id'}"/>
                     <filter name="by_month" string="Month" context="{'group_by': 'date:month'}"/>
                     <filter name="by_status" string="Status" context="{'group_by': 'state'}"/>
                 </group>
@@ -137,7 +137,7 @@
                 <field name="name"/>
                 <field name="date"/>
                 <field name="dispatch_id"/>
-                <field name="order_id"/>
+                <field name="order_names"/>
                 <field name="mill_ref"/>
                 <field name="dispatched_m" sum="Dispatched"/>
                 <field name="accepted_m" sum="Accepted"/>
@@ -164,7 +164,8 @@
                     <group>
                         <group string="Load sent">
                             <field name="dispatch_id" options="{'no_create': True}" readonly="state != 'draft'"/>
-                            <field name="order_id"/>
+                            <field name="partner_id"/>
+                            <field name="order_names"/>
                             <field name="dispatched_rolls"/>
                             <field name="dispatched_m" class="fs-4 fw-bold"/>
                         </group>
@@ -199,7 +200,6 @@
             <search>
                 <field name="name"/>
                 <field name="dispatch_id"/>
-                <field name="order_id"/>
                 <field name="partner_id"/>
                 <field name="mill_ref"/>
                 <filter name="current" string="Current (not superseded)"
@@ -208,7 +208,7 @@
                         domain="[('has_discrepancy','=',True),('state','=','confirmed')]"/>
                 <filter name="draft" string="Draft" domain="[('state','=','draft')]"/>
                 <group>
-                    <filter name="by_order" string="Order" context="{'group_by': 'order_id'}"/>
+                    <filter name="by_vendor" string="Vendor" context="{'group_by': 'partner_id'}"/>
                     <filter name="by_month" string="Month" context="{'group_by': 'date:month'}"/>
                 </group>
             </search>
@@ -220,7 +220,7 @@
         <field name="model">textile.reconciliation</field>
         <field name="arch" type="xml">
             <pivot string="Mill Reconciliation">
-                <field name="order_id" type="row"/>
+                <field name="partner_id" type="row"/>
                 <field name="date" interval="month" type="col"/>
                 <field name="dispatched_m" type="measure"/>
                 <field name="accepted_m" type="measure"/>
