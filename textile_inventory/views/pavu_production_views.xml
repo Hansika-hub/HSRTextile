@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<odoo>
+
+    <!-- LIST VIEW -->
+
+    <record id="view_pavu_production_list" model="ir.ui.view">
+        <field name="name">textile.pavu.production.list</field>
+        <field name="model">textile.pavu.production</field>
+        <field name="arch" type="xml">
+
+            <list string="Pavu Production">
+
+                <field name="name"/>
+                <field name="date"/>
+                <field name="yarn_product_id"/>
+                <field name="yarn_quantity"/>
+                <field name="pavu_product_id"/>
+                <field name="pavu_quantity"/>
+                <field name="state"/>
+
+            </list>
+
+        </field>
+    </record>
+
+
+    <!-- FORM VIEW -->
+
+    <record id="view_pavu_production_form" model="ir.ui.view">
+        <field name="name">textile.pavu.production.form</field>
+        <field name="model">textile.pavu.production</field>
+        <field name="arch" type="xml">
+
+            <form string="Pavu Production">
+
+                <header>
+
+                    <button
+                        name="action_produce"
+                        string="Produce Pavu"
+                        type="object"
+                        class="btn-primary"
+                        invisible="state != 'draft'"
+                    />
+
+                    <field
+                        name="state"
+                        widget="statusbar"
+                        statusbar_visible="draft,done"
+                    />
+
+                </header>
+
+                <sheet>
+
+                    <div class="oe_title">
+
+                        <h1>
+                            <field name="name"/>
+                        </h1>
+
+                    </div>
+
+                    <group>
+
+                        <group string="Production Details">
+
+                            <field name="date"/>
+
+                            <field
+                                name="yarn_product_id"
+                                options="{'no_create': True}"
+                            />
+
+                            <field name="yarn_quantity"/>
+
+                        </group>
+
+                        <group string="Output">
+
+                            <field
+                                name="pavu_product_id"
+                                options="{'no_create': True}"
+                            />
+
+                            <field name="pavu_quantity"/>
+
+                        </group>
+
+                    </group>
+
+                    <group string="Notes">
+
+                        <field
+                            name="notes"
+                            placeholder="Add production notes..."
+                        />
+
+                    </group>
+
+                </sheet>
+
+            </form>
+
+        </field>
+    </record>
+
+
+    <!-- ACTION -->
+
+    <record id="action_pavu_production" model="ir.actions.act_window">
+
+        <field name="name">Pavu Production</field>
+
+        <field name="res_model">textile.pavu.production</field>
+
+        <field name="view_mode">list,form</field>
+
+    </record>
+
+
+    <!-- MENU -->
+
+    <menuitem
+        id="menu_pavu_production"
+        name="Pavu Production"
+        parent="textile_inventory.menu_textile_inventory_root"
+        action="action_pavu_production"
+        sequence="20"
+    />
+
+</odoo>

@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_textile_yarn_bag_line,textile.yarn.bag.line,model_textile_yarn_bag_line,base.group_user,1,1,1,1
+access_pavu_production,pavu.production,model_textile_pavu_production,base.group_user,1,1,1,1
+access_textile_fabric_production_user,textile.fabric.production user,model_textile_fabric_production,base.group_user,1,1,1,1

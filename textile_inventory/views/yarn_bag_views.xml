@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<odoo>
+
+    <record id="view_yarn_bag_line_list" model="ir.ui.view">
+        <field name="name">textile.yarn.bag.line.list</field>
+        <field name="model">textile.yarn.bag.line</field>
+
+        <field name="arch" type="xml">
+            <list string="Yarn Bag Details">
+                <field name="product_id"/>
+                <field name="bag_size"/>
+                <field name="number_of_bags"/>
+                <field name="total_weight"/>
+                <field name="state"/>
+            </list>
+        </field>
+    </record>
+
+
+    <record id="view_yarn_bag_line_form" model="ir.ui.view">
+        <field name="name">textile.yarn.bag.line.form</field>
+        <field name="model">textile.yarn.bag.line</field>
+
+        <field name="arch" type="xml">
+            <form string="Yarn Bag Details">
+
+                <header>
+                    <button
+                        name="action_receive"
+                        string="Receive Yarn"
+                        type="object"
+                        class="btn-primary"
+                        invisible="state == 'done'"
+                    />
+
+                    <field
+                        name="state"
+                        widget="statusbar"
+                        statusbar_visible="draft,done"
+                    />
+                </header>
+
+                <sheet>
+                    <group>
+
+                        <group>
+                            <field name="product_id"/>
+                            <field name="bag_size"/>
+                            <field name="number_of_bags"/>
+                        </group>
+
+                        <group>
+                            <field name="total_weight" readonly="1"/>
+                            <field name="state" readonly="1"/>
+                        </group>
+
+                    </group>
+                </sheet>
+
+            </form>
+        </field>
+    </record>
+
+
+    <record id="action_yarn_bag_lines" model="ir.actions.act_window">
+        <field name="name">Yarn Bag Details</field>
+        <field name="res_model">textile.yarn.bag.line</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+
+    <menuitem
+        id="menu_textile_inventory_root"
+        name="Textile Inventory"
+        parent="stock.menu_stock_root"
+        sequence="50"
+    />
+
+    <menuitem
+        id="menu_yarn_bag_lines"
+        name="Yarn Bag Details"
+        parent="menu_textile_inventory_root"
+        action="action_yarn_bag_lines"
+        sequence="10"
+    />
+
+</odoo>
