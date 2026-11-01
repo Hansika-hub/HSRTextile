@@ -54,17 +54,6 @@ python odoo-bin -c odoo.conf -d HSRTextile_new -u textile_inventory --stop-after
 
 Open `http://localhost:8069`.
 
-## Tests
-
-Run the automated tests on a copy database, never on live data:
-
-```bash
-python odoo-bin -c odoo.conf -d HSRTextile_dev -u textile_inventory \
-  --test-enable --test-tags textile --stop-after-init --http-port=8099
-```
-
-The last log line should read `0 failed, 0 error(s) of 67 tests`.
-
 ## Deployment with Docker
 
 The `deploy/` folder holds a stack with PostgreSQL 16, Odoo 19, a Caddy HTTPS proxy and a nightly backup service. Only ports 80 and 443 are exposed; the database and Odoo are not published.
@@ -76,31 +65,3 @@ cp .env.example .env        # then fill in DOMAIN, DB_NAME and two strong secret
 docker compose up -d
 ./scripts/healthcheck.sh    # every line should say OK
 ```
-
-Other scripts:
-
-| Script | Purpose |
-|---|---|
-| `scripts/restore.sh <dump> [filestore.tar.gz] --force` | Restore a backup (takes a safety copy first) |
-| `scripts/backup.sh` | One verified backup of database and filestore |
-| `scripts/healthcheck.sh` | Container, website, backup age and disk check |
-
-Copy the backup folder off the server every night. A backup on the same server does not protect against losing the server.
-
-Never commit the `.env` file; it is excluded by `deploy/.gitignore`.
-
-## Status
-
-- Built and tested: all modules above, 67 automated tests, manual end-to-end walk-through
-- Docker stack: verified on a local staging copy
-- Not yet done: automated browser tests, concurrency stress tests, cloud deployment, off-site backup
-
-See the handover documents for the schema, installation and deployment guides, administrator and end-user manuals, test report, backup and recovery guide, known limitations and the production readiness checklist.
-
-## Open business decisions
-
-Company legal name and GST number, ownership of yarn and Pavu, stock deduction while weaving, final role split, and the final pay rule. The rate is currently a single general rate set in the system and must be confirmed.
-
-## License
-
-LGPL-3.0, as declared in the module manifest.
