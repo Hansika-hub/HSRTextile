@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- ===== Pay rates ===== -->
+    <record id="view_pay_rate_list" model="ir.ui.view">
+        <field name="name">textile.pay.rate.list</field>
+        <field name="model">textile.pay.rate</field>
+        <field name="arch" type="xml">
+            <list string="Pay Rates" editable="bottom">
+                <field name="date_from"/>
+                <field name="worker_id" placeholder="All workers"/>
+                <field name="rate_per_metre"/>
+                <field name="notes"/>
+                <field name="active" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_pay_rate" model="ir.actions.act_window">
+        <field name="name">Pay Rates (per metre)</field>
+        <field name="res_model">textile.pay.rate</field>
+        <field name="view_mode">list</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No pay rate yet</p>
+            <p>Add the rate per metre once the owner has confirmed it. Leave
+               the worker empty for a rate that applies to everyone.</p>
+        </field>
+    </record>
+
+    <!-- ===== Pay sheets ===== -->
+    <record id="view_worker_payment_list" model="ir.ui.view">
+        <field name="name">textile.worker.payment.list</field>
+        <field name="model">textile.worker.payment</field>
+        <field name="arch" type="xml">
+            <list string="Pay Sheets" decoration-muted="state == 'cancel'" decoration-success="state == 'paid'">
+                <field name="name"/>
+                <field name="worker_id"/>
+                <field name="date_from"/>
+                <field name="date_to"/>
+                <field name="total_metres" sum="Metres"/>
+                <field name="total_amount" sum="Amount"/>
+                <field name="state" widget="badge"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_worker_payment_form" model="ir.ui.view">
+        <field name="name">textile.worker.payment.form</field>
+        <field name="model">textile.worker.payment</field>
+        <field name="arch" type="xml">
+            <form string="Pay Sheet">
+                <header>
+                    <button name="action_compute" type="object" string="Calculate"
+                            class="btn-primary" invisible="state != 'draft'"/>
+                    <button name="action_approve" type="object" string="Approve"
+                            invisible="state != 'draft'"/>
+                    <button name="action_paid" type="object" string="Mark Paid" class="btn-primary"
+                            invisible="state != 'approved'"/>
+                    <button name="action_draft" type="object" string="Back to Draft"
+                            invisible="state not in ('approved', 'cancel')"/>
+                    <button name="action_cancel" type="object" string="Cancel"
+                            invisible="state in ('paid', 'cancel')"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,approved,paid"/>
+                </header>
+                <sheet>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
+                    <group>
+                        <group>
+                            <field name="worker_id" options="{'no_create': True}" readonly="state != 'draft'"/>
+                            <field name="date_from" readonly="state != 'draft'"/>
+                            <field name="date_to" readonly="state != 'draft'"/>
+                        </group>
+                        <group>
+                            <field name="total_metres" class="fs-3 fw-bold"/>
+                            <field name="total_amount" class="fs-3 fw-bold"/>
+                            <field name="approved_by_id"/>
+                        </group>
+                    </group>
+                    <field name="line_ids">
+                        <list create="0" edit="0" delete="0">
+                            <field name="date"/>
+                            <field name="shift"/>
+                            <field name="loom_id"/>
+                            <field name="order_id"/>
+                            <field name="metres" sum="Metres"/>
+                            <field name="rate"/>
+                            <field name="amount" sum="Amount"/>
+                        </list>
+                    </field>
+                    <group><field name="notes"/></group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_worker_payment_search" model="ir.ui.view">
+        <field name="name">textile.worker.payment.search</field>
+        <field name="model">textile.worker.payment</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="worker_id"/>
+                <filter name="draft" string="Draft" domain="[('state','=','draft')]"/>
+                <filter name="approved" string="To pay" domain="[('state','=','approved')]"/>
+                <filter name="paid" string="Paid" domain="[('state','=','paid')]"/>
+                <group>
+                    <filter name="by_worker" string="Worker" context="{'group_by': 'worker_id'}"/>
+                    <filter name="by_month" string="Month" context="{'group_by': 'date_to:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_worker_payment" model="ir.actions.act_window">
+        <field name="name">Pay Sheets</field>
+        <field name="res_model">textile.worker.payment</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- ===== Pay summary (shift-wise and monthly) ===== -->
+    <record id="view_payment_line_pivot" model="ir.ui.view">
+        <field name="name">textile.worker.payment.line.pivot</field>
+        <field name="model">textile.worker.payment.line</field>
+        <field name="arch" type="xml">
+            <pivot string="Pay Summary">
+                <field name="worker_id" type="row"/>
+                <field name="date" interval="month" type="col"/>
+                <field name="metres" type="measure"/>
+                <field name="amount" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_payment_line_list" model="ir.ui.view">
+        <field name="name">textile.worker.payment.line.list</field>
+        <field name="model">textile.worker.payment.line</field>
+        <field name="arch" type="xml">
+            <list string="Pay Summary" create="0" edit="0" delete="0">
+                <field name="date"/>
+                <field name="shift"/>
+                <field name="worker_id"/>
+                <field name="loom_id"/>
+                <field name="order_id"/>
+                <field name="metres" sum="Metres"/>
+                <field name="rate"/>
+                <field name="amount" sum="Amount"/>
+                <field name="pay_state"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_payment_line_search" model="ir.ui.view">
+        <field name="name">textile.worker.payment.line.search</field>
+        <field name="model">textile.worker.payment.line</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="worker_id"/>
+                <field name="order_id"/>
+                <filter name="valid" string="Not cancelled" domain="[('pay_state','!=','cancel')]"/>
+                <filter name="day" string="Day shift" domain="[('shift','=','day')]"/>
+                <filter name="night" string="Night shift" domain="[('shift','=','night')]"/>
+                <group>
+                    <filter name="by_worker" string="Worker" context="{'group_by': 'worker_id'}"/>
+                    <filter name="by_shift" string="Shift" context="{'group_by': 'shift'}"/>
+                    <filter name="by_month" string="Month" context="{'group_by': 'date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_payment_line" model="ir.actions.act_window">
+        <field name="name">Pay Summary</field>
+        <field name="res_model">textile.worker.payment.line</field>
+        <field name="view_mode">pivot,list</field>
+        <field name="context">{'search_default_valid': 1}</field>
+    </record>
+
+    <menuitem id="menu_pay_sheets" name="Pay Sheets" parent="menu_textile_pay_root"
+              action="action_worker_payment" sequence="10"/>
+    <menuitem id="menu_pay_summary" name="Pay Summary" parent="menu_textile_pay_root"
+              action="action_payment_line" sequence="20"/>
+    <menuitem id="menu_pay_rates" name="Pay Rates" parent="menu_textile_pay_root"
+              action="action_pay_rate" sequence="30"/>
+</odoo>

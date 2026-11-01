@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Top-level app menu (was previously under Inventory) -->
+    <record id="menu_textile_inventory_root" model="ir.ui.menu">
+        <field name="name">Textile ERP</field>
+        <field name="sequence">5</field>
+        <field name="parent_id" eval="False"/>
+    </record>
+
+    <menuitem id="menu_textile_receipts" name="Receipts"
+              parent="menu_textile_inventory_root" sequence="10"/>
+    <menuitem id="menu_textile_looms_root" name="Looms"
+              parent="menu_textile_inventory_root" sequence="20"/>
+    <menuitem id="menu_textile_production_root" name="Production"
+              parent="menu_textile_inventory_root" sequence="30"/>
+    <menuitem id="menu_textile_dispatch_root" name="Dispatch &amp; Mill"
+              parent="menu_textile_inventory_root" sequence="40"/>
+    <menuitem id="menu_textile_pay_root" name="Worker Pay"
+              parent="menu_textile_inventory_root" sequence="50"
+              groups="textile_inventory.group_textile_accountant,textile_inventory.group_textile_admin"/>
+</odoo>

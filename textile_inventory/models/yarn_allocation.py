@@ -1,157 +1,109 @@
-from odoo import models, fields, api
-from odoo.exceptions import UserError
+from odoo import api, fields, models
+from odoo.exceptions import UserError, ValidationError
 
 
 class YarnAllocation(models.Model):
     _name = 'textile.yarn.allocation'
     _description = 'Yarn Allocation to Loom'
+    _inherit = ['mail.thread', 'textile.stock.mixin']
     _order = 'id desc'
 
+    name = fields.Char(
+        string='Allocation No.', default='New', readonly=True, copy=False,
+    )
     product_id = fields.Many2one(
-        'product.product',
-        string='Yarn Product',
-        required=True,
-        domain=[('type', '=', 'consu')],
+        'product.product', string='Yarn Product', required=True,
+        tracking=True, domain=[('is_storable', '=', True)],
     )
-
     loom_id = fields.Many2one(
-        'textile.loom',
-        string='Loom',
-        required=True,
+        'textile.loom', string='Loom', required=True, tracking=True,
     )
-
-    quantity = fields.Float(
-        string='Quantity (kg)',
-        required=True,
+    order_id = fields.Many2one(
+        'textile.order', string='Vendor Order', required=True, tracking=True,
+        domain=[('state', '=', 'open')],
     )
-
+    quantity = fields.Float(string='Quantity (kg)', required=True, tracking=True)
     state = fields.Selection(
-        [
-            ('draft', 'Draft'),
-            ('allocated', 'Allocated'),
-        ],
-        string='Status',
-        default='draft',
-        readonly=True,
+        [('draft', 'Draft'), ('allocated', 'Allocated')],
+        string='Status', default='draft', readonly=True, copy=False,
+        tracking=True,
     )
-
     allocation_date = fields.Datetime(
-        string='Allocation Date',
-        default=fields.Datetime.now,
-        readonly=True,
+        string='Allocation Date', readonly=True, copy=False,
     )
-
-    notes = fields.Text(
-        string='Notes',
+    picking_id = fields.Many2one(
+        'stock.picking', string='Stock Transfer', readonly=True, copy=False,
     )
+    notes = fields.Text(string='Notes')
 
-    def action_allocate(self):
-        """Move yarn from Godown stock to Loom Allocation stock."""
-
+    @api.constrains('quantity')
+    def _check_quantity(self):
         for record in self:
-
-            # ---------------------------------------------
-            # 1. VALIDATIONS
-            # ---------------------------------------------
-
-            if record.state == 'allocated':
-                raise UserError(
-                    'This yarn allocation has already been completed.'
-                )
-
-            if not record.product_id:
-                raise UserError(
-                    'Please select a yarn product.'
-                )
-
-            if not record.loom_id:
-                raise UserError(
-                    'Please select a loom.'
-                )
-
             if record.quantity <= 0:
-                raise UserError(
+                raise ValidationError(
                     'Allocation quantity must be greater than zero.'
                 )
 
-            # ---------------------------------------------
-            # 2. GODOWN / MAIN STOCK LOCATION
-            # ---------------------------------------------
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get('name', 'New') == 'New':
+                vals['name'] = (
+                    self.env['ir.sequence'].next_by_code('textile.yarn.allocation')
+                    or 'New'
+                )
+        return super().create(vals_list)
 
-            source_location = self.env.ref(
-                'stock.stock_location_stock'
+    def unlink(self):
+        if any(record.state == 'allocated' for record in self):
+            raise UserError(
+                'A completed allocation cannot be deleted because stock '
+                'has already been moved.'
             )
+        return super().unlink()
 
-            # ---------------------------------------------
-            # 3. LOOM ALLOCATION LOCATION
-            # ---------------------------------------------
-
-            destination_location = self.env.ref(
-                'textile_inventory.location_loom_allocation'
+    def action_allocate(self):
+        """Move yarn from the godown to the Loom Allocation location with
+        a standard internal transfer. Never allows negative stock."""
+        self._textile_lock()
+        for record in self:
+            if record.state == 'allocated':
+                raise UserError('This yarn allocation has already been completed.')
+            uom = record._textile_check_product(
+                record.product_id, 'uom.product_uom_kgm', 'kg'
             )
-
-            # ---------------------------------------------
-            # 4. CHECK AVAILABLE STOCK
-            # ---------------------------------------------
-
-            available_qty = self.env['stock.quant']._get_available_quantity(
-                record.product_id,
-                source_location,
-            )
-
-            if available_qty < record.quantity:
+            record._textile_check_order(record.order_id, False)
+            if record.loom_id.status == 'breakdown':
                 raise UserError(
-                    f'Not enough yarn available in Godown.\n\n'
-                    f'Product: {record.product_id.name}\n'
-                    f'Available: {available_qty:.2f} kg\n'
-                    f'Requested: {record.quantity:.2f} kg'
+                    'Loom %s is under breakdown. Mark the breakdown as '
+                    'repaired before allocating yarn to it.' % record.loom_id.code)
+            warehouse = record._textile_warehouse()
+            source = warehouse.lot_stock_id
+            dest = self.env.ref(
+                'textile_inventory.location_loom_allocation',
+                raise_if_not_found=False,
+            )
+            if not dest:
+                raise UserError('The "Loom Allocation" stock location is missing.')
+
+            available = self.env['stock.quant']._get_available_quantity(
+                record.product_id, source
+            )
+            if available < record.quantity:
+                raise UserError(
+                    'Not enough yarn available in the godown.\n\n'
+                    'Product: %s\nAvailable: %.2f kg\nRequested: %.2f kg'
+                    % (record.product_id.display_name, available, record.quantity)
                 )
 
-            # ---------------------------------------------
-            # 5. CREATE INTERNAL STOCK MOVE
-            # ---------------------------------------------
-
-            move = self.env['stock.move'].create({
-                'product_id': record.product_id.id,
-                'product_uom_qty': record.quantity,
-                'product_uom': record.product_id.uom_id.id,
-                'location_id': source_location.id,
-                'location_dest_id': destination_location.id,
+            picking = record._textile_transfer(
+                warehouse.int_type_id, False,
+                '%s / %s / %s' % (record.name, record.order_id.name, record.loom_id.code),
+                record.product_id, record.quantity, uom, source, dest,
+            )
+            record.write({
+                'picking_id': picking.id,
+                'state': 'allocated',
+                'allocation_date': fields.Datetime.now(),
             })
-
-            # ---------------------------------------------
-            # 6. CONFIRM
-            # ---------------------------------------------
-
-            move._action_confirm()
-
-            # ---------------------------------------------
-            # 7. ASSIGN
-            # ---------------------------------------------
-
-            move._action_assign()
-
-            # ---------------------------------------------
-            # 8. SET ACTUAL QUANTITY
-            # ---------------------------------------------
-
-            if not move.move_line_ids:
-                raise UserError(
-                    'Odoo could not create a stock move line.'
-                )
-
-            move.move_line_ids.write({
-                'quantity': record.quantity,
-            })
-
-            # ---------------------------------------------
-            # 9. MARK PICKED
-            # ---------------------------------------------
-
-            move.picked = True
-
-            # ---------------------------------------------
-            # 10. COMPLETE TRANSFER
-            # ---------------------------------------------
-
-            move._action_done()
+        return True

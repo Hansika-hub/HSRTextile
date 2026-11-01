@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_textile_order_list" model="ir.ui.view">
+        <field name="name">textile.order.list</field>
+        <field name="model">textile.order</field>
+        <field name="arch" type="xml">
+            <list string="Vendor Orders" decoration-muted="state in ('done','cancel')" decoration-info="state == 'open'">
+                <field name="name"/>
+                <field name="order_ref"/>
+                <field name="partner_id"/>
+                <field name="order_date"/>
+                <field name="expected_date"/>
+                <field name="required_fabric_m" sum="Fabric m"/>
+                <field name="fabric_produced_m" sum="Woven m"/>
+                <field name="fabric_pending_m" sum="To weave m"/>
+                <field name="yarn_received_kg" sum="Yarn kg"/>
+                <field name="yarn_pending_kg" sum="Pending kg"/>
+                <field name="pavu_received_m" sum="Pavu m"/>
+                <field name="pavu_pending_m" sum="Pending m"/>
+                <field name="state" widget="badge"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_textile_order_form" model="ir.ui.view">
+        <field name="name">textile.order.form</field>
+        <field name="model">textile.order</field>
+        <field name="arch" type="xml">
+            <form string="Vendor Order">
+                <header>
+                    <button name="action_confirm" string="Confirm Order" type="object"
+                            class="btn-primary" invisible="state != 'draft'"/>
+                    <button name="action_done" string="Mark Completed" type="object"
+                            invisible="state != 'open'"
+                            confirm="Mark this order as completed? No more receipts or allocations can be added."/>
+                    <button name="action_cancel" string="Cancel Order" type="object"
+                            invisible="state not in ('draft','open')"
+                            confirm="Cancel this order?"/>
+                    <button name="action_draft" string="Set to Draft" type="object"
+                            invisible="state != 'cancel'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,open,done"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_yarn_receipts" type="object" class="oe_stat_button" icon="fa-shopping-basket">
+                            <field name="yarn_receipt_count" widget="statinfo" string="Yarn Receipts"/>
+                        </button>
+                        <button name="action_view_pavu_receipts" type="object" class="oe_stat_button" icon="fa-circle-o-notch">
+                            <field name="pavu_receipt_count" widget="statinfo" string="Pavu Receipts"/>
+                        </button>
+                        <button name="action_view_allocations" type="object" class="oe_stat_button" icon="fa-list">
+                            <field name="allocation_count" widget="statinfo" string="Allocations"/>
+                        </button>
+                        <button name="action_view_production" type="object" class="oe_stat_button" icon="fa-industry">
+                            <field name="production_count" widget="statinfo" string="Production"/>
+                        </button>
+                        <button name="action_view_dispatches" type="object" class="oe_stat_button" icon="fa-truck">
+                            <field name="dispatch_count" widget="statinfo" string="Dispatches"/>
+                        </button>
+                        <button name="action_view_rolls" type="object" class="oe_stat_button" icon="fa-th-large">
+                            <field name="roll_count" widget="statinfo" string="Fabric Rolls"/>
+                        </button>
+                    </div>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
+                    <group>
+                        <group string="Order">
+                            <field name="order_ref" readonly="state != 'draft'"/>
+                            <field name="partner_id" readonly="state != 'draft'"/>
+                            <field name="order_date" readonly="state != 'draft'"/>
+                            <field name="expected_date"/>
+                        </group>
+                        <group string="Required">
+                            <field name="required_fabric_m" class="fs-3 fw-bold"/>
+                            <field name="expected_yarn_kg"/>
+                            <field name="expected_pavu_m"/>
+                            <label for="roll_length_min" string="Fabric roll length (m)"/>
+                            <div class="d-flex gap-2">
+                                <field name="roll_length_min" class="oe_inline"/> to
+                                <field name="roll_length_max" class="oe_inline"/>
+                            </div>
+                        </group>
+                    </group>
+                    <group string="Progress (received only counts completed receipts)">
+                        <group>
+                            <field name="yarn_received_kg" class="fs-4 fw-bold"/>
+                            <field name="yarn_pending_kg"/>
+                            <field name="yarn_allocated_kg"/>
+                        </group>
+                        <group>
+                            <field name="pavu_received_m" class="fs-4 fw-bold"/>
+                            <field name="pavu_pending_m"/>
+                        </group>
+                    </group>
+                    <group string="Fabric (confirmed production only)">
+                        <group>
+                            <field name="fabric_produced_m" class="fs-4 fw-bold"/>
+                            <field name="fabric_pending_m"/>
+                            <field name="fabric_rolled_m"/>
+                            <field name="fabric_unrolled_m"/>
+                        </group>
+                        <group>
+                            <field name="fabric_damaged_m"/>
+                            <field name="fabric_waste_m"/>
+                            <field name="fabric_rejected_m"/>
+                        </group>
+                    </group>
+                    <group string="Dispatch and Mill">
+                        <group>
+                            <field name="fabric_stock_m" class="fs-4 fw-bold"/>
+                            <field name="fabric_dispatched_m"/>
+                            <field name="mill_pending_m"/>
+                        </group>
+                        <group>
+                            <field name="mill_accepted_m"/>
+                            <field name="mill_rejected_m"/>
+                            <field name="mill_missing_m"/>
+                        </group>
+                    </group>
+                    <group string="Notes">
+                        <field name="notes" nolabel="1"/>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_textile_order_search" model="ir.ui.view">
+        <field name="name">textile.order.search</field>
+        <field name="model">textile.order</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="order_ref"/>
+                <field name="partner_id"/>
+                <filter name="open" string="Open (pending)" domain="[('state','=','open')]"/>
+                <filter name="draft" string="Draft" domain="[('state','=','draft')]"/>
+                <filter name="done" string="Completed" domain="[('state','=','done')]"/>
+                <group>
+                    <filter name="by_vendor" string="Vendor" context="{'group_by': 'partner_id'}"/>
+                    <filter name="by_status" string="Status" context="{'group_by': 'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_textile_order" model="ir.actions.act_window">
+        <field name="name">Vendor Orders</field>
+        <field name="res_model">textile.order</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_open': 1}</field>
+    </record>
+
+    <menuitem id="menu_textile_orders" name="Vendor Orders"
+              parent="menu_textile_inventory_root" action="action_textile_order" sequence="1"/>
+</odoo>

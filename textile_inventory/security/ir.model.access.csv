@@ -1,4 +1,71 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_textile_yarn_bag_line,textile.yarn.bag.line,model_textile_yarn_bag_line,base.group_user,1,1,1,1
-access_pavu_production,pavu.production,model_textile_pavu_production,base.group_user,1,1,1,1
-access_textile_fabric_production_user,textile.fabric.production user,model_textile_fabric_production,base.group_user,1,1,1,1
+access_yarn_receipt_accountant,yarn receipt accountant,model_textile_yarn_bag_line,group_textile_accountant,1,0,0,0
+access_yarn_receipt_supervisor,yarn receipt supervisor,model_textile_yarn_bag_line,group_textile_supervisor,1,0,0,0
+access_yarn_receipt_inventory,yarn receipt inventory,model_textile_yarn_bag_line,group_textile_inventory,1,1,1,1
+access_yarn_receipt_admin,yarn receipt admin,model_textile_yarn_bag_line,group_textile_admin,1,1,1,1
+access_pavu_receipt_accountant,pavu receipt accountant,model_textile_pavu_receipt,group_textile_accountant,1,0,0,0
+access_pavu_receipt_supervisor,pavu receipt supervisor,model_textile_pavu_receipt,group_textile_supervisor,1,0,0,0
+access_pavu_receipt_inventory,pavu receipt inventory,model_textile_pavu_receipt,group_textile_inventory,1,1,1,1
+access_pavu_receipt_admin,pavu receipt admin,model_textile_pavu_receipt,group_textile_admin,1,1,1,1
+access_pavu_line_accountant,pavu line accountant,model_textile_pavu_receipt_line,group_textile_accountant,1,0,0,0
+access_pavu_line_supervisor,pavu line supervisor,model_textile_pavu_receipt_line,group_textile_supervisor,1,0,0,0
+access_pavu_line_inventory,pavu line inventory,model_textile_pavu_receipt_line,group_textile_inventory,1,1,1,1
+access_pavu_line_admin,pavu line admin,model_textile_pavu_receipt_line,group_textile_admin,1,1,1,1
+access_loom_accountant,loom accountant,model_textile_loom,group_textile_accountant,1,0,0,0
+access_loom_supervisor,loom supervisor,model_textile_loom,group_textile_supervisor,1,1,0,0
+access_loom_inventory,loom inventory,model_textile_loom,group_textile_inventory,1,1,1,0
+access_loom_admin,loom admin,model_textile_loom,group_textile_admin,1,1,1,1
+access_breakdown_accountant,loom breakdown accountant,model_textile_loom_breakdown,group_textile_accountant,1,0,0,0
+access_breakdown_supervisor,loom breakdown supervisor,model_textile_loom_breakdown,group_textile_supervisor,1,1,1,0
+access_breakdown_inventory,loom breakdown inventory,model_textile_loom_breakdown,group_textile_inventory,1,1,1,0
+access_breakdown_admin,loom breakdown admin,model_textile_loom_breakdown,group_textile_admin,1,1,1,1
+access_allocation_accountant,allocation accountant,model_textile_yarn_allocation,group_textile_accountant,1,0,0,0
+access_allocation_supervisor,allocation supervisor,model_textile_yarn_allocation,group_textile_supervisor,1,1,1,0
+access_allocation_inventory,allocation inventory,model_textile_yarn_allocation,group_textile_inventory,1,1,1,1
+access_allocation_admin,allocation admin,model_textile_yarn_allocation,group_textile_admin,1,1,1,1
+access_fabric_accountant,fabric production accountant,model_textile_fabric_production,group_textile_accountant,1,0,0,0
+access_fabric_supervisor,fabric production supervisor,model_textile_fabric_production,group_textile_supervisor,1,1,1,0
+access_fabric_inventory,fabric production inventory,model_textile_fabric_production,group_textile_inventory,1,0,0,0
+access_fabric_admin,fabric production admin,model_textile_fabric_production,group_textile_admin,1,1,1,1
+access_order_accountant,order accountant,model_textile_order,group_textile_accountant,1,0,0,0
+access_order_supervisor,order supervisor,model_textile_order,group_textile_supervisor,1,0,0,0
+access_order_inventory,order inventory,model_textile_order,group_textile_inventory,1,1,1,0
+access_order_admin,order admin,model_textile_order,group_textile_admin,1,1,1,1
+access_emptyroll_accountant,empty roll accountant,model_textile_empty_roll_log,group_textile_accountant,1,0,0,0
+access_emptyroll_supervisor,empty roll supervisor,model_textile_empty_roll_log,group_textile_supervisor,1,1,1,0
+access_emptyroll_inventory,empty roll inventory,model_textile_empty_roll_log,group_textile_inventory,1,1,1,1
+access_emptyroll_admin,empty roll admin,model_textile_empty_roll_log,group_textile_admin,1,1,1,1
+access_worker_accountant,worker accountant,model_textile_worker,group_textile_accountant,1,0,0,0
+access_worker_supervisor,worker supervisor,model_textile_worker,group_textile_supervisor,1,1,1,0
+access_worker_inventory,worker inventory,model_textile_worker,group_textile_inventory,1,0,0,0
+access_worker_admin,worker admin,model_textile_worker,group_textile_admin,1,1,1,1
+access_production_accountant,production accountant,model_textile_production,group_textile_accountant,1,0,0,0
+access_production_supervisor,production supervisor,model_textile_production,group_textile_supervisor,1,1,1,0
+access_production_inventory,production inventory,model_textile_production,group_textile_inventory,1,0,0,0
+access_production_admin,production admin,model_textile_production,group_textile_admin,1,1,1,1
+access_roll_accountant,fabric roll accountant,model_textile_fabric_roll,group_textile_accountant,1,0,0,0
+access_roll_supervisor,fabric roll supervisor,model_textile_fabric_roll,group_textile_supervisor,1,1,1,0
+access_roll_inventory,fabric roll inventory,model_textile_fabric_roll,group_textile_inventory,1,1,1,0
+access_roll_admin,fabric roll admin,model_textile_fabric_roll,group_textile_admin,1,1,1,1
+access_prodworker_accountant,production worker accountant,model_textile_production_worker,group_textile_accountant,1,0,0,0
+access_prodworker_supervisor,production worker supervisor,model_textile_production_worker,group_textile_supervisor,1,1,1,1
+access_prodworker_inventory,production worker inventory,model_textile_production_worker,group_textile_inventory,1,0,0,0
+access_prodworker_admin,production worker admin,model_textile_production_worker,group_textile_admin,1,1,1,1
+access_dispatch_accountant,dispatch accountant,model_textile_dispatch,group_textile_accountant,1,0,0,0
+access_dispatch_supervisor,dispatch supervisor,model_textile_dispatch,group_textile_supervisor,1,0,0,0
+access_dispatch_inventory,dispatch inventory,model_textile_dispatch,group_textile_inventory,1,1,1,1
+access_dispatch_admin,dispatch admin,model_textile_dispatch,group_textile_admin,1,1,1,1
+access_recon_accountant,reconciliation accountant,model_textile_reconciliation,group_textile_accountant,1,1,1,1
+access_recon_supervisor,reconciliation supervisor,model_textile_reconciliation,group_textile_supervisor,1,0,0,0
+access_recon_inventory,reconciliation inventory,model_textile_reconciliation,group_textile_inventory,1,1,1,1
+access_recon_admin,reconciliation admin,model_textile_reconciliation,group_textile_admin,1,1,1,1
+access_payrate_accountant,pay rate accountant,model_textile_pay_rate,group_textile_accountant,1,1,1,1
+access_payrate_admin,pay rate admin,model_textile_pay_rate,group_textile_admin,1,1,1,1
+access_payment_accountant,pay sheet accountant,model_textile_worker_payment,group_textile_accountant,1,1,1,1
+access_payment_admin,pay sheet admin,model_textile_worker_payment,group_textile_admin,1,1,1,1
+access_paymentline_accountant,pay sheet line accountant,model_textile_worker_payment_line,group_textile_accountant,1,1,1,1
+access_paymentline_admin,pay sheet line admin,model_textile_worker_payment_line,group_textile_admin,1,1,1,1
+access_dashboard_accountant,dashboard accountant,model_textile_dashboard,group_textile_accountant,1,1,1,1
+access_dashboard_supervisor,dashboard supervisor,model_textile_dashboard,group_textile_supervisor,1,1,1,1
+access_dashboard_inventory,dashboard inventory,model_textile_dashboard,group_textile_inventory,1,1,1,1
+access_dashboard_admin,dashboard admin,model_textile_dashboard,group_textile_admin,1,1,1,1

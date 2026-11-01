@@ -1,88 +1,86 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
 <odoo>
-
     <record id="view_yarn_bag_line_list" model="ir.ui.view">
         <field name="name">textile.yarn.bag.line.list</field>
         <field name="model">textile.yarn.bag.line</field>
-
         <field name="arch" type="xml">
-            <list string="Yarn Bag Details">
+            <list string="Yarn Receipts" decoration-success="state == 'done'">
+                <field name="name"/>
+                <field name="date"/>
+                <field name="partner_id"/>
+                <field name="order_id"/>
                 <field name="product_id"/>
                 <field name="bag_size"/>
                 <field name="number_of_bags"/>
-                <field name="total_weight"/>
-                <field name="state"/>
+                <field name="total_weight" sum="Total kg"/>
+                <field name="state" widget="badge"/>
             </list>
         </field>
     </record>
 
-
     <record id="view_yarn_bag_line_form" model="ir.ui.view">
         <field name="name">textile.yarn.bag.line.form</field>
         <field name="model">textile.yarn.bag.line</field>
-
         <field name="arch" type="xml">
-            <form string="Yarn Bag Details">
-
+            <form string="Yarn Receipt">
                 <header>
-                    <button
-                        name="action_receive"
-                        string="Receive Yarn"
-                        type="object"
-                        class="btn-primary"
-                        invisible="state == 'done'"
-                    />
-
-                    <field
-                        name="state"
-                        widget="statusbar"
-                        statusbar_visible="draft,done"
-                    />
+                    <button name="action_receive" string="Receive Yarn"
+                            type="object" class="btn-primary"
+                            invisible="state == 'done'"
+                            confirm="Add this yarn to godown stock? This cannot be undone."/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,done"/>
                 </header>
-
                 <sheet>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
                     <group>
-
-                        <group>
-                            <field name="product_id"/>
-                            <field name="bag_size"/>
-                            <field name="number_of_bags"/>
+                        <group string="Receipt">
+                            <field name="date" readonly="state == 'done'"/>
+                            <field name="partner_id" readonly="state == 'done'"/>
+                            <field name="order_id" required="1" options="{'no_create': True}" readonly="state == 'done'"/>
+                            <field name="vehicle_no" readonly="state == 'done'"/>
                         </group>
-
-                        <group>
-                            <field name="total_weight" readonly="1"/>
-                            <field name="state" readonly="1"/>
+                        <group string="Yarn">
+                            <field name="product_id" options="{'no_create': True}" readonly="state == 'done'"/>
+                            <field name="bag_size" readonly="state == 'done'"/>
+                            <field name="number_of_bags" readonly="state == 'done'"/>
+                            <field name="total_weight" class="fs-3 fw-bold"/>
+                            <field name="picking_id"/>
                         </group>
-
+                    </group>
+                    <group string="Notes">
+                        <field name="notes" nolabel="1" readonly="state == 'done'"/>
                     </group>
                 </sheet>
-
+                <chatter/>
             </form>
         </field>
     </record>
 
+    <record id="view_yarn_bag_line_search" model="ir.ui.view">
+        <field name="name">textile.yarn.bag.line.search</field>
+        <field name="model">textile.yarn.bag.line</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="order_id"/>
+                <field name="product_id"/>
+                <filter name="draft" string="Draft" domain="[('state','=','draft')]"/>
+                <filter name="done" string="Received" domain="[('state','=','done')]"/>
+                <group>
+                    <filter name="by_vendor" string="Vendor" context="{'group_by': 'partner_id'}"/>
+                    <filter name="by_date" string="Month" context="{'group_by': 'date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
 
     <record id="action_yarn_bag_lines" model="ir.actions.act_window">
-        <field name="name">Yarn Bag Details</field>
+        <field name="name">Yarn Receipts</field>
         <field name="res_model">textile.yarn.bag.line</field>
         <field name="view_mode">list,form</field>
     </record>
 
-
-    <menuitem
-        id="menu_textile_inventory_root"
-        name="Textile Inventory"
-        parent="stock.menu_stock_root"
-        sequence="50"
-    />
-
-    <menuitem
-        id="menu_yarn_bag_lines"
-        name="Yarn Bag Details"
-        parent="menu_textile_inventory_root"
-        action="action_yarn_bag_lines"
-        sequence="10"
-    />
-
+    <menuitem id="menu_yarn_bag_lines" name="Yarn Receipts"
+              parent="menu_textile_receipts" action="action_yarn_bag_lines" sequence="10"/>
 </odoo>

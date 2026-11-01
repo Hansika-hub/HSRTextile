@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_empty_roll_list" model="ir.ui.view">
+        <field name="name">textile.empty.roll.log.list</field>
+        <field name="model">textile.empty.roll.log</field>
+        <field name="arch" type="xml">
+            <list string="Empty Rolls" editable="bottom">
+                <field name="date"/>
+                <field name="action"/>
+                <field name="quantity"/>
+                <field name="order_id" options="{'no_create': True}"/>
+                <field name="partner_id"/>
+                <field name="notes"/>
+                <field name="signed_quantity" sum="Rolls in hand"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_empty_roll_search" model="ir.ui.view">
+        <field name="name">textile.empty.roll.log.search</field>
+        <field name="model">textile.empty.roll.log</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="order_id"/>
+                <field name="partner_id"/>
+                <filter name="collected" string="Collected" domain="[('action','=','collected')]"/>
+                <filter name="reused" string="Reused" domain="[('action','=','reused')]"/>
+                <filter name="returned" string="Returned" domain="[('action','=','returned')]"/>
+                <group>
+                    <filter name="by_action" string="Action" context="{'group_by': 'action'}"/>
+                    <filter name="by_month" string="Month" context="{'group_by': 'date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_empty_roll" model="ir.actions.act_window">
+        <field name="name">Empty Rolls</field>
+        <field name="res_model">textile.empty.roll.log</field>
+        <field name="view_mode">list</field>
+    </record>
+
+    <menuitem id="menu_empty_roll" name="Empty Rolls"
+              parent="menu_textile_receipts" action="action_empty_roll" sequence="40"/>
+</odoo>

@@ -1,190 +1,107 @@
-from odoo import models, fields, api
-from odoo.exceptions import UserError
+from odoo import api, fields, models
+from odoo.exceptions import UserError, ValidationError
 
 
 class YarnBagLine(models.Model):
     _name = 'textile.yarn.bag.line'
-    _description = 'Yarn Bag Details'
+    _description = 'Yarn Receipt'
+    _inherit = ['mail.thread', 'textile.stock.mixin']
+    _order = 'id desc'
 
+    name = fields.Char(
+        string='Receipt No.', default='New', readonly=True, copy=False,
+    )
+    date = fields.Date(
+        string='Receipt Date', required=True, tracking=True,
+        default=fields.Date.context_today,
+    )
+    partner_id = fields.Many2one(
+        'res.partner', string='Vendor', tracking=True,
+    )
+    order_id = fields.Many2one(
+        'textile.order', string='Vendor Order', tracking=True,
+        domain=[('state', '=', 'open')],
+    )
+    vehicle_no = fields.Char(string='Vehicle No.')
     product_id = fields.Many2one(
-        'product.product',
-        string='Yarn Product',
-        required=True,
-        domain=[('type', '=', 'consu')],
+        'product.product', string='Yarn Product', required=True,
+        tracking=True, domain=[('is_storable', '=', True)],
     )
-
-    bag_size = fields.Float(
-        string='Bag Size (kg)',
-        required=True,
-    )
-
+    bag_size = fields.Float(string='Bag Size (kg)', required=True, tracking=True)
     number_of_bags = fields.Integer(
-        string='Number of Bags',
-        required=True,
-        default=1,
+        string='Number of Bags', required=True, default=1, tracking=True,
     )
-
     total_weight = fields.Float(
-        string='Total Weight (kg)',
-        compute='_compute_total_weight',
-        store=True,
+        string='Total Weight (kg)', compute='_compute_total_weight', store=True,
     )
-
+    picking_id = fields.Many2one(
+        'stock.picking', string='Stock Receipt', readonly=True, copy=False,
+    )
     state = fields.Selection(
-        [
-            ('draft', 'Draft'),
-            ('done', 'Received'),
-        ],
-        string='Status',
-        default='draft',
-        readonly=True,
+        [('draft', 'Draft'), ('done', 'Received')],
+        string='Status', default='draft', readonly=True, copy=False,
+        tracking=True,
     )
+    notes = fields.Text(string='Notes')
 
     @api.depends('bag_size', 'number_of_bags')
     def _compute_total_weight(self):
         for record in self:
-            record.total_weight = (
-                record.bag_size * record.number_of_bags
+            record.total_weight = record.bag_size * record.number_of_bags
+
+    @api.constrains('bag_size', 'number_of_bags')
+    def _check_positive(self):
+        for record in self:
+            if record.bag_size <= 0:
+                raise ValidationError('Bag size must be greater than zero.')
+            if record.number_of_bags <= 0:
+                raise ValidationError('Number of bags must be greater than zero.')
+
+    @api.onchange('order_id')
+    def _onchange_order_id(self):
+        if self.order_id:
+            self.partner_id = self.order_id.partner_id
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get('name', 'New') == 'New':
+                vals['name'] = (
+                    self.env['ir.sequence'].next_by_code('textile.yarn.receipt')
+                    or 'New'
+                )
+        return super().create(vals_list)
+
+    def unlink(self):
+        if any(record.state == 'done' for record in self):
+            raise UserError(
+                'A received yarn receipt cannot be deleted because stock '
+                'has already been added.'
             )
+        return super().unlink()
 
     def action_receive(self):
-        """
-        Receive yarn bags into Odoo stock.
-
-        Example:
-        2 bags × 50 kg = 100 kg
-        """
-
+        """Receive yarn into the godown with a standard Odoo receipt.
+        Example: 5 bags x 50 kg = 250 kg."""
+        self._textile_lock()
         for record in self:
-
-            # -------------------------------------------------
-            # 1. VALIDATION
-            # -------------------------------------------------
-
             if record.state == 'done':
-                raise UserError(
-                    'This yarn receipt has already been received.'
-                )
-
-            if not record.product_id:
-                raise UserError(
-                    'Please select a yarn product.'
-                )
-
-            if record.number_of_bags <= 0:
-                raise UserError(
-                    'Number of bags must be greater than zero.'
-                )
-
-            if record.bag_size <= 0:
-                raise UserError(
-                    'Bag size must be greater than zero.'
-                )
-
+                raise UserError('This yarn receipt has already been received.')
+            uom = record._textile_check_product(
+                record.product_id, 'uom.product_uom_kgm', 'kg'
+            )
             if record.total_weight <= 0:
-                raise UserError(
-                    'Total weight must be greater than zero.'
-                )
+                raise UserError('Total weight must be greater than zero.')
 
-            # -------------------------------------------------
-            # 2. FIND INTERNAL STOCK LOCATION
-            # -------------------------------------------------
-
-            stock_location = self.env['stock.location'].search(
-                [
-                    ('usage', '=', 'internal'),
-                    '|',
-                    ('company_id', '=', self.env.company.id),
-                    ('company_id', '=', False),
-                ],
-                order='id',
-                limit=1,
+            warehouse = record._textile_warehouse()
+            picking_type = warehouse.in_type_id
+            record._textile_check_order(record.order_id, record.partner_id)
+            origin = record._textile_origin(record.name, record.order_id)
+            picking = record._textile_transfer(
+                picking_type, record.partner_id, origin, record.product_id,
+                record.total_weight, uom,
+                picking_type.default_location_src_id,
+                picking_type.default_location_dest_id,
             )
-
-            if not stock_location:
-                raise UserError(
-                    'Could not find an internal stock location.'
-                )
-
-            # -------------------------------------------------
-            # 3. FIND SUPPLIER LOCATION
-            # -------------------------------------------------
-
-            supplier_location = self.env['stock.location'].search(
-                [
-                    ('usage', '=', 'supplier'),
-                ],
-                order='id',
-                limit=1,
-            )
-
-            if not supplier_location:
-                raise UserError(
-                    'Could not find a supplier location.'
-                )
-
-            # -------------------------------------------------
-            # 4. CREATE STOCK MOVE
-            # -------------------------------------------------
-
-            move = self.env['stock.move'].create({
-                'product_id': record.product_id.id,
-                'product_uom_qty': record.total_weight,
-                'product_uom': record.product_id.uom_id.id,
-                'location_id': supplier_location.id,
-                'location_dest_id': stock_location.id,
-            })
-
-            # -------------------------------------------------
-            # 5. CONFIRM MOVE
-            # -------------------------------------------------
-
-            move._action_confirm()
-
-            # -------------------------------------------------
-            # 6. ASSIGN MOVE
-            # -------------------------------------------------
-
-            move._action_assign()
-
-            # -------------------------------------------------
-            # 7. SET ACTUAL RECEIVED QUANTITY
-            # -------------------------------------------------
-
-            if not move.move_line_ids:
-                raise UserError(
-                    'Odoo could not create a stock move line.'
-                )
-
-            move.move_line_ids.write({
-                'quantity': record.total_weight,
-            })
-
-            # -------------------------------------------------
-            # 8. MARK AS PICKED
-            # -------------------------------------------------
-
-            move.picked = True
-
-            # -------------------------------------------------
-            # 9. COMPLETE STOCK MOVE
-            # -------------------------------------------------
-
-            move._action_done()
-
-            # -------------------------------------------------
-            # 10. VERIFY MOVE
-            # -------------------------------------------------
-
-            if move.state != 'done':
-                raise UserError(
-                    'The stock movement could not be completed.'
-                )
-
-            # -------------------------------------------------
-            # 11. MARK YARN RECEIPT AS RECEIVED
-            # -------------------------------------------------
-
-            record.state = 'done'
-
+            record.write({'picking_id': picking.id, 'state': 'done'})
         return True

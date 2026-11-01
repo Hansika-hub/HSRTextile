@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- ================= DISPATCH ================= -->
+    <record id="view_textile_dispatch_list" model="ir.ui.view">
+        <field name="name">textile.dispatch.list</field>
+        <field name="model">textile.dispatch</field>
+        <field name="arch" type="xml">
+            <list string="Dispatches" decoration-muted="state == 'cancel'"
+                  decoration-danger="reconciliation_state == 'discrepancy'"
+                  decoration-success="reconciliation_state == 'matched'">
+                <field name="name"/>
+                <field name="date"/>
+                <field name="partner_id"/>
+                <field name="order_names"/>
+                <field name="destination"/>
+                <field name="vehicle_no"/>
+                <field name="roll_count" sum="Rolls"/>
+                <field name="total_metres" sum="Metres"/>
+                <field name="reconciliation_state" widget="badge"/>
+                <field name="state" widget="badge"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_textile_dispatch_form" model="ir.ui.view">
+        <field name="name">textile.dispatch.form</field>
+        <field name="model">textile.dispatch</field>
+        <field name="arch" type="xml">
+            <form string="Dispatch">
+                <header>
+                    <button name="action_confirm" type="object" string="Confirm Dispatch"
+                            class="btn-primary" invisible="state != 'draft'"
+                            confirm="Take these rolls out of stock and mark them as sent?"/>
+                    <button name="action_new_reconciliation" type="object"
+                            string="Record Mill Receipt" class="btn-primary"
+                            invisible="state != 'dispatched'"/>
+                    <button name="action_cancel" type="object" string="Cancel Dispatch"
+                            invisible="state != 'dispatched'"
+                            confirm="Put the rolls back into stock?"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,dispatched"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_reconciliations" type="object"
+                                class="oe_stat_button" icon="fa-balance-scale">
+                            <field name="reconciliation_count" widget="statinfo" string="Mill Checks"/>
+                        </button>
+                    </div>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
+                    <group>
+                        <group string="Load">
+                            <field name="date" readonly="state != 'draft'"/>
+                            <field name="partner_id" options="{'no_create': True}" readonly="state != 'draft'"/>
+                            <field name="order_names"/>
+                            <field name="destination" readonly="state != 'draft'"/>
+                        </group>
+                        <group string="Vehicle">
+                            <field name="vehicle_no" readonly="state != 'draft'"/>
+                            <field name="driver_name" readonly="state != 'draft'"/>
+                            <field name="driver_phone" readonly="state != 'draft'"/>
+                            <field name="roll_count" class="fs-3 fw-bold"/>
+                            <field name="total_metres" class="fs-3 fw-bold"/>
+                        </group>
+                    </group>
+                    <group string="Mill Check" invisible="state != 'dispatched'">
+                        <group>
+                            <field name="reconciliation_state" widget="badge"/>
+                            <field name="mill_accepted_m"/>
+                        </group>
+                        <group>
+                            <field name="mill_rejected_m"/>
+                            <field name="mill_missing_m"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Fabric Rolls" name="rolls">
+                            <field name="roll_ids" readonly="state != 'draft'"
+                                   options="{'no_create': True}"
+                                   domain="[('state', '=', 'available'), ('order_id.partner_id', '=', partner_id)]">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="order_id"/>
+                                    <field name="date"/>
+                                    <field name="length_m" sum="Total"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Stock Transfers" name="pickings">
+                            <field name="picking_ids"/>
+                        </page>
+                        <page string="Notes" name="notes">
+                            <field name="notes"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_textile_dispatch_search" model="ir.ui.view">
+        <field name="name">textile.dispatch.search</field>
+        <field name="model">textile.dispatch</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="vehicle_no"/>
+                <field name="roll_ids" string="Roll No."/>
+                <field name="partner_id"/>
+                <field name="destination"/>
+                <filter name="draft" string="Draft" domain="[('state','=','draft')]"/>
+                <filter name="sent" string="Dispatched" domain="[('state','=','dispatched')]"/>
+                <filter name="pending" string="Awaiting Mill" domain="[('reconciliation_state','=','pending')]"/>
+                <filter name="disc" string="With Discrepancy" domain="[('reconciliation_state','=','discrepancy')]"/>
+                <group>
+                    <filter name="by_vendor" string="Vendor" context="{'group_by': 'partner_id'}"/>
+                    <filter name="by_month" string="Month" context="{'group_by': 'date:month'}"/>
+                    <filter name="by_status" string="Status" context="{'group_by': 'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_textile_dispatch" model="ir.actions.act_window">
+        <field name="name">Dispatches</field>
+        <field name="res_model">textile.dispatch</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- ================= RECONCILIATION ================= -->
+    <record id="view_textile_reconciliation_list" model="ir.ui.view">
+        <field name="name">textile.reconciliation.list</field>
+        <field name="model">textile.reconciliation</field>
+        <field name="arch" type="xml">
+            <list string="Mill Reconciliation" decoration-muted="state == 'superseded'"
+                  decoration-danger="has_discrepancy and state == 'confirmed'">
+                <field name="name"/>
+                <field name="date"/>
+                <field name="dispatch_id"/>
+                <field name="order_names"/>
+                <field name="mill_ref"/>
+                <field name="dispatched_m" sum="Dispatched"/>
+                <field name="accepted_m" sum="Accepted"/>
+                <field name="rejected_m" sum="Rejected"/>
+                <field name="missing_m" sum="Missing"/>
+                <field name="has_discrepancy" column_invisible="1"/>
+                <field name="state" widget="badge"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_textile_reconciliation_form" model="ir.ui.view">
+        <field name="name">textile.reconciliation.form</field>
+        <field name="model">textile.reconciliation</field>
+        <field name="arch" type="xml">
+            <form string="Mill Reconciliation">
+                <header>
+                    <button name="action_confirm" type="object" string="Confirm"
+                            class="btn-primary" invisible="state != 'draft'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,confirmed"/>
+                </header>
+                <sheet>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
+                    <group>
+                        <group string="Load sent">
+                            <field name="dispatch_id" options="{'no_create': True}" readonly="state != 'draft'"/>
+                            <field name="partner_id"/>
+                            <field name="order_names"/>
+                            <field name="dispatched_rolls"/>
+                            <field name="dispatched_m" class="fs-4 fw-bold"/>
+                        </group>
+                        <group string="Mill says (totals for the load)">
+                            <field name="date" readonly="state != 'draft'"/>
+                            <field name="mill_ref" readonly="state != 'draft'"/>
+                            <field name="rolls_received" readonly="state != 'draft'"/>
+                            <field name="accepted_m" class="fs-4 fw-bold" readonly="state != 'draft'"/>
+                            <field name="rejected_m" class="fs-4 fw-bold" readonly="state != 'draft'"/>
+                        </group>
+                    </group>
+                    <group string="Difference">
+                        <group>
+                            <field name="missing_m" class="fs-3 fw-bold"/>
+                            <field name="missing_rolls"/>
+                            <field name="has_discrepancy"/>
+                        </group>
+                        <group>
+                            <field name="remarks"/>
+                        </group>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_textile_reconciliation_search" model="ir.ui.view">
+        <field name="name">textile.reconciliation.search</field>
+        <field name="model">textile.reconciliation</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="dispatch_id"/>
+                <field name="partner_id"/>
+                <field name="mill_ref"/>
+                <filter name="current" string="Current (not superseded)"
+                        domain="[('state','!=','superseded')]"/>
+                <filter name="disc" string="With discrepancy"
+                        domain="[('has_discrepancy','=',True),('state','=','confirmed')]"/>
+                <filter name="draft" string="Draft" domain="[('state','=','draft')]"/>
+                <group>
+                    <filter name="by_vendor" string="Vendor" context="{'group_by': 'partner_id'}"/>
+                    <filter name="by_month" string="Month" context="{'group_by': 'date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_textile_reconciliation_pivot" model="ir.ui.view">
+        <field name="name">textile.reconciliation.pivot</field>
+        <field name="model">textile.reconciliation</field>
+        <field name="arch" type="xml">
+            <pivot string="Mill Reconciliation">
+                <field name="partner_id" type="row"/>
+                <field name="date" interval="month" type="col"/>
+                <field name="dispatched_m" type="measure"/>
+                <field name="accepted_m" type="measure"/>
+                <field name="rejected_m" type="measure"/>
+                <field name="missing_m" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="action_textile_reconciliation" model="ir.actions.act_window">
+        <field name="name">Mill Reconciliation</field>
+        <field name="res_model">textile.reconciliation</field>
+        <field name="view_mode">list,form,pivot</field>
+        <field name="context">{'search_default_current': 1}</field>
+    </record>
+
+    <menuitem id="menu_textile_dispatch" name="Dispatches"
+              parent="menu_textile_dispatch_root" action="action_textile_dispatch" sequence="10"/>
+    <menuitem id="menu_textile_reconciliation" name="Mill Reconciliation"
+              parent="menu_textile_dispatch_root" action="action_textile_reconciliation" sequence="20"/>
+</odoo>

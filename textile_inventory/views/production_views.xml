@@ -1,0 +1,307 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- ================= Workers ================= -->
+    <record id="view_worker_list" model="ir.ui.view">
+        <field name="name">textile.worker.list</field>
+        <field name="model">textile.worker</field>
+        <field name="arch" type="xml">
+            <list string="Workers" editable="bottom">
+                <field name="name"/>
+                <field name="code"/>
+                <field name="phone"/>
+                <field name="notes"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_worker" model="ir.actions.act_window">
+        <field name="name">Workers</field>
+        <field name="res_model">textile.worker</field>
+        <field name="view_mode">list</field>
+    </record>
+
+    <!-- ================= Production entries ================= -->
+    <record id="view_production_list" model="ir.ui.view">
+        <field name="name">textile.production.list</field>
+        <field name="model">textile.production</field>
+        <field name="arch" type="xml">
+            <list string="Production Entries" decoration-success="state == 'confirmed'">
+                <field name="name"/>
+                <field name="date"/>
+                <field name="shift"/>
+                <field name="loom_id"/>
+                <field name="worker_ids" widget="many2many_tags"/>
+                <field name="order_id"/>
+                <field name="metres_produced" sum="Produced"/>
+                <field name="metres_damaged" sum="Damaged" optional="show"/>
+                <field name="metres_waste" sum="Waste" optional="show"/>
+                <field name="metres_rejected" sum="Rejected" optional="show"/>
+                <field name="good_metres" sum="Good"/>
+                <field name="state" widget="badge"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_production_form" model="ir.ui.view">
+        <field name="name">textile.production.form</field>
+        <field name="model">textile.production</field>
+        <field name="arch" type="xml">
+            <form string="Production Entry">
+                <header>
+                    <button name="action_confirm" string="Confirm Production" type="object"
+                            class="btn-primary" invisible="state != 'draft'"
+                            confirm="Confirm this shift's production? It will be locked."/>
+                    <button name="action_draft" string="Set to Draft" type="object"
+                            invisible="state != 'confirmed'"
+                            groups="textile_inventory.group_textile_admin"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,confirmed"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_rolls" type="object" class="oe_stat_button" icon="fa-circle-o-notch">
+                            <field name="roll_count" widget="statinfo" string="Fabric Rolls"/>
+                        </button>
+                    </div>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
+                    <group>
+                        <group string="Shift">
+                            <field name="date" readonly="state == 'confirmed'"/>
+                            <field name="shift" readonly="state == 'confirmed'"/>
+                            <field name="loom_id" options="{'no_create': True}" readonly="state == 'confirmed'"/>
+                            <field name="order_id" options="{'no_create': True}" readonly="state == 'confirmed'"/>
+                        </group>
+                        <group string="Metres">
+                            <field name="metres_produced" class="fs-3 fw-bold" readonly="state == 'confirmed'"/>
+                            <field name="metres_damaged" readonly="state == 'confirmed'"/>
+                            <field name="metres_waste" readonly="state == 'confirmed'"/>
+                            <field name="metres_rejected" readonly="state == 'confirmed'"/>
+                            <field name="good_metres" class="fs-3 fw-bold text-success"/>
+                        </group>
+                    </group>
+                    <group string="Workers on this loom (if two share the shift, add both)">
+                        <field name="line_ids" nolabel="1" readonly="state == 'confirmed'">
+                            <list editable="bottom">
+                                <field name="worker_id" options="{'no_create': True}"/>
+                                <field name="share_metres" string="Share of good fabric (m) - leave 0 for equal split"/>
+                            </list>
+                        </field>
+                    </group>
+                    <group invisible="state != 'confirmed'">
+                        <field name="confirmed_by_id"/>
+                        <field name="confirmed_date"/>
+                    </group>
+                    <group string="Notes">
+                        <field name="notes" nolabel="1"/>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_production_search" model="ir.ui.view">
+        <field name="name">textile.production.search</field>
+        <field name="model">textile.production</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="loom_id"/>
+                <field name="line_ids" string="Worker"
+                       filter_domain="[('line_ids.worker_id.name', 'ilike', self)]"/>
+                <field name="order_id"/>
+                <filter name="day" string="Day shift" domain="[('shift','=','day')]"/>
+                <filter name="night" string="Night shift" domain="[('shift','=','night')]"/>
+                <filter name="draft" string="Draft" domain="[('state','=','draft')]"/>
+                <filter name="confirmed" string="Confirmed" domain="[('state','=','confirmed')]"/>
+                <group>
+                    <filter name="by_loom" string="Loom" context="{'group_by': 'loom_id'}"/>
+                    <filter name="by_order" string="Order" context="{'group_by': 'order_id'}"/>
+                    <filter name="by_shift" string="Shift" context="{'group_by': 'shift'}"/>
+                    <filter name="by_month" string="Month" context="{'group_by': 'date:month'}"/>
+                    <filter name="by_day" string="Day" context="{'group_by': 'date:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_production_pivot" model="ir.ui.view">
+        <field name="name">textile.production.pivot</field>
+        <field name="model">textile.production</field>
+        <field name="arch" type="xml">
+            <pivot string="Production Summary">
+                <field name="date" interval="month" type="row"/>
+                <field name="shift" type="col"/>
+                <field name="good_metres" type="measure"/>
+                <field name="metres_produced" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="action_production" model="ir.actions.act_window">
+        <field name="name">Production Entries</field>
+        <field name="res_model">textile.production</field>
+        <field name="view_mode">list,form,pivot</field>
+    </record>
+
+    <!-- ================= Finished fabric rolls ================= -->
+    <record id="view_fabric_roll_list" model="ir.ui.view">
+        <field name="name">textile.fabric.roll.list</field>
+        <field name="model">textile.fabric.roll</field>
+        <field name="arch" type="xml">
+            <list string="Fabric Rolls" decoration-warning="out_of_range" decoration-muted="state == 'cancel'">
+                <field name="name"/>
+                <field name="date"/>
+                <field name="order_id"/>
+                <field name="length_m" sum="Metres"/>
+                <field name="out_of_range" column_invisible="1"/>
+                <field name="state" widget="badge"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_fabric_roll_form" model="ir.ui.view">
+        <field name="name">textile.fabric.roll.form</field>
+        <field name="model">textile.fabric.roll</field>
+        <field name="arch" type="xml">
+            <form string="Fabric Roll">
+                <header>
+                    <button name="action_confirm" string="Add to Stock" type="object"
+                            class="btn-primary" invisible="state != 'draft'"
+                            confirm="Add this roll to finished fabric stock?"/>
+                    <button name="action_cancel" string="Cancel Roll" type="object"
+                            invisible="state != 'available'"
+                            confirm="Cancel this roll and remove it from stock?"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,available,dispatched"/>
+                </header>
+                <sheet>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
+                    <div class="alert alert-warning" role="alert" invisible="not out_of_range">
+                        This roll is outside the normal length range set on the order.
+                    </div>
+                    <group>
+                        <group>
+                            <field name="date" readonly="state != 'draft'"/>
+                            <field name="order_id" options="{'no_create': True}" readonly="state != 'draft'"/>
+                            <field name="product_id" options="{'no_create': True}" readonly="state != 'draft'"/>
+                            <field name="length_m" class="fs-3 fw-bold" readonly="state != 'draft'"/>
+                            <field name="out_of_range" invisible="1"/>
+                        </group>
+                        <group>
+                            <field name="picking_id"/>
+                            <field name="dispatch_id"/>
+                            <field name="notes"/>
+                        </group>
+                    </group>
+                    <group string="Woven in these shift entries">
+                        <field name="production_ids" nolabel="1" readonly="state != 'draft'"
+                               domain="[('order_id', '=', order_id), ('state', '=', 'confirmed')]"
+                               options="{'no_create': True}">
+                            <list>
+                                <field name="name"/>
+                                <field name="date"/>
+                                <field name="shift"/>
+                                <field name="loom_id"/>
+                                <field name="good_metres"/>
+                            </list>
+                        </field>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_fabric_roll_search" model="ir.ui.view">
+        <field name="name">textile.fabric.roll.search</field>
+        <field name="model">textile.fabric.roll</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="order_id"/>
+                <filter name="available" string="In stock" domain="[('state','=','available')]"/>
+                <filter name="draft" string="Draft" domain="[('state','=','draft')]"/>
+                <filter name="dispatched" string="Dispatched" domain="[('state','=','dispatched')]"/>
+                <group>
+                    <filter name="by_order" string="Order" context="{'group_by': 'order_id'}"/>
+                    <filter name="by_state" string="Status" context="{'group_by': 'state'}"/>
+                    <filter name="by_month" string="Month" context="{'group_by': 'date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_fabric_roll" model="ir.actions.act_window">
+        <field name="name">Fabric Rolls</field>
+        <field name="res_model">textile.fabric.roll</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_available': 1}</field>
+    </record>
+
+    <menuitem id="menu_production" name="Production Entries"
+              parent="menu_textile_production_root" action="action_production" sequence="10"/>
+    <menuitem id="menu_fabric_roll" name="Fabric Rolls"
+              parent="menu_textile_production_root" action="action_fabric_roll" sequence="20"/>
+    <menuitem id="menu_worker" name="Workers"
+              parent="menu_textile_production_root" action="action_worker" sequence="30"/>
+
+    <!-- ================= Worker-wise production ================= -->
+    <record id="view_prodworker_list" model="ir.ui.view">
+        <field name="name">textile.production.worker.list</field>
+        <field name="model">textile.production.worker</field>
+        <field name="arch" type="xml">
+            <list string="Worker Production" create="0" edit="0" delete="0">
+                <field name="date"/>
+                <field name="shift"/>
+                <field name="worker_id"/>
+                <field name="loom_id"/>
+                <field name="order_id"/>
+                <field name="production_id"/>
+                <field name="share_metres" sum="Good metres"/>
+                <field name="payable_metres" sum="Payable metres"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_prodworker_pivot" model="ir.ui.view">
+        <field name="name">textile.production.worker.pivot</field>
+        <field name="model">textile.production.worker</field>
+        <field name="arch" type="xml">
+            <pivot string="Worker Production">
+                <field name="worker_id" type="row"/>
+                <field name="date" interval="month" type="col"/>
+                <field name="share_metres" type="measure"/>
+                <field name="payable_metres" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_prodworker_search" model="ir.ui.view">
+        <field name="name">textile.production.worker.search</field>
+        <field name="model">textile.production.worker</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="worker_id"/>
+                <field name="loom_id"/>
+                <field name="order_id"/>
+                <filter name="confirmed" string="Confirmed" domain="[('production_state','=','confirmed')]"/>
+                <filter name="day" string="Day shift" domain="[('shift','=','day')]"/>
+                <filter name="night" string="Night shift" domain="[('shift','=','night')]"/>
+                <group>
+                    <filter name="by_worker" string="Worker" context="{'group_by': 'worker_id'}"/>
+                    <filter name="by_shift" string="Shift" context="{'group_by': 'shift'}"/>
+                    <filter name="by_month" string="Month" context="{'group_by': 'date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_prodworker" model="ir.actions.act_window">
+        <field name="name">Worker Production</field>
+        <field name="res_model">textile.production.worker</field>
+        <field name="view_mode">pivot,list</field>
+        <field name="context">{'search_default_confirmed': 1}</field>
+    </record>
+
+    <menuitem id="menu_prodworker" name="Worker Production"
+              parent="menu_textile_production_root" action="action_prodworker" sequence="25"/>
+</odoo>

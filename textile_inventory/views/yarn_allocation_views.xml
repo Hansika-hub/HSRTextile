@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_yarn_allocation_list" model="ir.ui.view">
+        <field name="name">textile.yarn.allocation.list</field>
+        <field name="model">textile.yarn.allocation</field>
+        <field name="arch" type="xml">
+            <list string="Yarn Allocations" decoration-success="state == 'allocated'">
+                <field name="name"/>
+                <field name="allocation_date"/>
+                <field name="order_id"/>
+                <field name="loom_id"/>
+                <field name="product_id"/>
+                <field name="quantity" sum="Total kg"/>
+                <field name="state" widget="badge"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_yarn_allocation_form" model="ir.ui.view">
+        <field name="name">textile.yarn.allocation.form</field>
+        <field name="model">textile.yarn.allocation</field>
+        <field name="arch" type="xml">
+            <form string="Yarn Allocation">
+                <header>
+                    <button name="action_allocate" string="Allocate Yarn"
+                            type="object" class="btn-primary"
+                            invisible="state == 'allocated'"
+                            confirm="Move this yarn from the godown to the loom? This cannot be undone."/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,allocated"/>
+                </header>
+                <sheet>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
+                    <group>
+                        <group>
+                            <field name="order_id" options="{'no_create': True}" readonly="state == 'allocated'"/>
+                            <field name="loom_id" options="{'no_create': True}" readonly="state == 'allocated'"/>
+                            <field name="product_id" options="{'no_create': True}" readonly="state == 'allocated'"/>
+                            <field name="quantity" class="fs-3 fw-bold" readonly="state == 'allocated'"/>
+                        </group>
+                        <group>
+                            <field name="allocation_date"/>
+                            <field name="picking_id"/>
+                        </group>
+                    </group>
+                    <group string="Notes">
+                        <field name="notes" nolabel="1" readonly="state == 'allocated'"/>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_yarn_allocation_search" model="ir.ui.view">
+        <field name="name">textile.yarn.allocation.search</field>
+        <field name="model">textile.yarn.allocation</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="order_id"/>
+                <field name="loom_id"/>
+                <field name="product_id"/>
+                <filter name="draft" string="Draft" domain="[('state','=','draft')]"/>
+                <filter name="allocated" string="Allocated" domain="[('state','=','allocated')]"/>
+                <group>
+                    <filter name="by_loom" string="Loom" context="{'group_by': 'loom_id'}"/>
+                    <filter name="by_date" string="Month" context="{'group_by': 'allocation_date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_yarn_allocation" model="ir.actions.act_window">
+        <field name="name">Yarn Allocations</field>
+        <field name="res_model">textile.yarn.allocation</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="menu_yarn_allocation" name="Yarn Allocation"
+              parent="menu_textile_looms_root" action="action_yarn_allocation" sequence="20"/>
+</odoo>

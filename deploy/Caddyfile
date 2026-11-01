@@ -1,0 +1,29 @@
+# Automatic HTTPS (Let's Encrypt) for a real domain; for DOMAIN=localhost Caddy uses its own local certificate.
+{$DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	# Odoo live updates (websocket) live on the gevent port when workers > 0
+	@websocket path /websocket*
+	reverse_proxy @websocket odoo:8072
+
+	request_body {
+		max_size 50MB
+	}
+	reverse_proxy odoo:8069 {
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Real-IP {remote_host}
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}
