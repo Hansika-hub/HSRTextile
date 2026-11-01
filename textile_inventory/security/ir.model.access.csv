@@ -65,3 +65,7 @@ access_payment_accountant,pay sheet accountant,model_textile_worker_payment,grou
 access_payment_admin,pay sheet admin,model_textile_worker_payment,group_textile_admin,1,1,1,1
 access_paymentline_accountant,pay sheet line accountant,model_textile_worker_payment_line,group_textile_accountant,1,1,1,1
 access_paymentline_admin,pay sheet line admin,model_textile_worker_payment_line,group_textile_admin,1,1,1,1
+access_dashboard_accountant,dashboard accountant,model_textile_dashboard,group_textile_accountant,1,1,1,1
+access_dashboard_supervisor,dashboard supervisor,model_textile_dashboard,group_textile_supervisor,1,1,1,1
+access_dashboard_inventory,dashboard inventory,model_textile_dashboard,group_textile_inventory,1,1,1,1
+access_dashboard_admin,dashboard admin,model_textile_dashboard,group_textile_admin,1,1,1,1

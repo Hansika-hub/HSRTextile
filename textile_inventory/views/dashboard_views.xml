@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_textile_dashboard_form" model="ir.ui.view">
+        <field name="name">textile.dashboard.form</field>
+        <field name="model">textile.dashboard</field>
+        <field name="arch" type="xml">
+            <form string="Dashboard" create="0" edit="0" delete="0">
+                <sheet>
+                    <h1>Management Dashboard</h1>
+                    <group string="Stock">
+                        <group>
+                            <field name="yarn_stock_kg" class="fs-2 fw-bold"/>
+                            <field name="yarn_on_looms_kg"/>
+                            <field name="pavu_stock_m" class="fs-2 fw-bold"/>
+                        </group>
+                        <group>
+                            <field name="fabric_stock_m" class="fs-2 fw-bold"/>
+                            <field name="fabric_stock_rolls"/>
+                            <button name="action_rolls" type="object" string="View rolls" class="btn-link"/>
+                        </group>
+                    </group>
+                    <group string="Looms">
+                        <group>
+                            <field name="loom_total"/>
+                            <field name="loom_worked_today"/>
+                            <field name="loom_utilisation" widget="progressbar"/>
+                        </group>
+                        <group>
+                            <field name="loom_breakdown" class="text-danger fw-bold"/>
+                            <button name="action_looms" type="object" string="View looms" class="btn-link"/>
+                        </group>
+                    </group>
+                    <group string="Production (confirmed entries)">
+                        <group string="Today">
+                            <field name="prod_today_m" class="fs-3 fw-bold"/>
+                            <field name="prod_today_good_m"/>
+                        </group>
+                        <group string="This month">
+                            <field name="prod_month_m" class="fs-3 fw-bold"/>
+                            <field name="prod_month_good_m"/>
+                            <field name="prod_month_loss_m"/>
+                        </group>
+                    </group>
+                    <group string="Orders">
+                        <group>
+                            <field name="order_open" class="fs-3 fw-bold"/>
+                            <field name="order_fabric_pending_m"/>
+                        </group>
+                        <group>
+                            <button name="action_orders" type="object" string="View pending orders" class="btn-link"/>
+                        </group>
+                    </group>
+                    <group string="Dispatch and Mill">
+                        <group>
+                            <field name="dispatch_month_count"/>
+                            <field name="dispatch_month_m"/>
+                            <field name="dispatch_awaiting"/>
+                            <field name="dispatch_awaiting_m"/>
+                            <button name="action_awaiting" type="object" string="View loads awaiting mill" class="btn-link"/>
+                        </group>
+                        <group>
+                            <field name="recon_discrepancies" class="text-danger fw-bold"/>
+                            <field name="recon_missing_m"/>
+                            <field name="recon_rejected_m"/>
+                            <button name="action_differences" type="object" string="View loads with difference" class="btn-link"/>
+                        </group>
+                    </group>
+                    <group string="Worker Pay" groups="textile_inventory.group_textile_accountant,textile_inventory.group_textile_admin">
+                        <group>
+                            <field name="pay_to_pay" class="fs-3 fw-bold"/>
+                            <field name="pay_paid_month"/>
+                            <field name="pay_draft"/>
+                        </group>
+                        <group>
+                            <button name="action_pay_due" type="object" string="View pay sheets to pay" class="btn-link"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_textile_dashboard" model="ir.actions.server">
+        <field name="name">Dashboard</field>
+        <field name="model_id" ref="model_textile_dashboard"/>
+        <field name="state">code</field>
+        <field name="code">action = model.action_open()</field>
+    </record>
+
+    <menuitem id="menu_textile_dashboard" name="Dashboard"
+              parent="menu_textile_inventory_root" action="action_textile_dashboard" sequence="0"/>
+</odoo>

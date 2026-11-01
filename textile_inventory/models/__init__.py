@@ -10,3 +10,4 @@ from . import fabric_roll
 from . import fabric_production
 from . import dispatch
 from . import payment
+from . import dashboard

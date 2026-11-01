@@ -1,6 +1,6 @@
 {
     'name': 'Textile Inventory',
-    'version': '19.0.1.6.0',
+    'version': '19.0.1.7.0',
     'category': 'Inventory',
     'author': 'HSR Textiles',
     'summary': 'Textile weaving / job-work: orders, receipts, looms, allocation',
@@ -21,6 +21,7 @@
         'views/production_views.xml',
         'views/dispatch_views.xml',
         'views/payment_views.xml',
+        'views/dashboard_views.xml',
         'reports/report_templates.xml',
     ],
     'installable': True,
