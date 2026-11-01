@@ -18,6 +18,10 @@ class YarnAllocation(models.Model):
     loom_id = fields.Many2one(
         'textile.loom', string='Loom', required=True, tracking=True,
     )
+    order_id = fields.Many2one(
+        'textile.order', string='Vendor Order', required=True, tracking=True,
+        domain=[('state', '=', 'open')],
+    )
     quantity = fields.Float(string='Quantity (kg)', required=True, tracking=True)
     state = fields.Selection(
         [('draft', 'Draft'), ('allocated', 'Allocated')],
@@ -68,6 +72,11 @@ class YarnAllocation(models.Model):
             uom = record._textile_check_product(
                 record.product_id, 'uom.product_uom_kgm', 'kg'
             )
+            record._textile_check_order(record.order_id, False)
+            if record.loom_id.status == 'breakdown':
+                raise UserError(
+                    'Loom %s is under breakdown. Mark the breakdown as '
+                    'repaired before allocating yarn to it.' % record.loom_id.code)
             warehouse = record._textile_warehouse()
             source = warehouse.lot_stock_id
             dest = self.env.ref(
@@ -89,7 +98,7 @@ class YarnAllocation(models.Model):
 
             picking = record._textile_transfer(
                 warehouse.int_type_id, False,
-                '%s / %s' % (record.name, record.loom_id.code),
+                '%s / %s / %s' % (record.name, record.order_id.name, record.loom_id.code),
                 record.product_id, record.quantity, uom, source, dest,
             )
             record.write({

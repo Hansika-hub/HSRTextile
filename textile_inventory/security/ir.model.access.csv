@@ -15,6 +15,10 @@ access_loom_accountant,loom accountant,model_textile_loom,group_textile_accounta
 access_loom_supervisor,loom supervisor,model_textile_loom,group_textile_supervisor,1,1,0,0
 access_loom_inventory,loom inventory,model_textile_loom,group_textile_inventory,1,1,1,0
 access_loom_admin,loom admin,model_textile_loom,group_textile_admin,1,1,1,1
+access_breakdown_accountant,loom breakdown accountant,model_textile_loom_breakdown,group_textile_accountant,1,0,0,0
+access_breakdown_supervisor,loom breakdown supervisor,model_textile_loom_breakdown,group_textile_supervisor,1,1,1,0
+access_breakdown_inventory,loom breakdown inventory,model_textile_loom_breakdown,group_textile_inventory,1,1,1,0
+access_breakdown_admin,loom breakdown admin,model_textile_loom_breakdown,group_textile_admin,1,1,1,1
 access_allocation_accountant,allocation accountant,model_textile_yarn_allocation,group_textile_accountant,1,0,0,0
 access_allocation_supervisor,allocation supervisor,model_textile_yarn_allocation,group_textile_supervisor,1,1,1,0
 access_allocation_inventory,allocation inventory,model_textile_yarn_allocation,group_textile_inventory,1,1,1,1
@@ -23,3 +27,11 @@ access_fabric_accountant,fabric production accountant,model_textile_fabric_produ
 access_fabric_supervisor,fabric production supervisor,model_textile_fabric_production,group_textile_supervisor,1,1,1,0
 access_fabric_inventory,fabric production inventory,model_textile_fabric_production,group_textile_inventory,1,0,0,0
 access_fabric_admin,fabric production admin,model_textile_fabric_production,group_textile_admin,1,1,1,1
+access_order_accountant,order accountant,model_textile_order,group_textile_accountant,1,0,0,0
+access_order_supervisor,order supervisor,model_textile_order,group_textile_supervisor,1,0,0,0
+access_order_inventory,order inventory,model_textile_order,group_textile_inventory,1,1,1,0
+access_order_admin,order admin,model_textile_order,group_textile_admin,1,1,1,1
+access_emptyroll_accountant,empty roll accountant,model_textile_empty_roll_log,group_textile_accountant,1,0,0,0
+access_emptyroll_supervisor,empty roll supervisor,model_textile_empty_roll_log,group_textile_supervisor,1,1,1,0
+access_emptyroll_inventory,empty roll inventory,model_textile_empty_roll_log,group_textile_inventory,1,1,1,1
+access_emptyroll_admin,empty roll admin,model_textile_empty_roll_log,group_textile_admin,1,1,1,1

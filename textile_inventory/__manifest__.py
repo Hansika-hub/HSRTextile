@@ -1,9 +1,9 @@
 {
     'name': 'Textile Inventory',
-    'version': '19.0.1.1.0',
+    'version': '19.0.1.2.0',
     'category': 'Inventory',
     'author': 'HSR Textiles',
-    'summary': 'Textile weaving / job-work: receipts, looms, allocation',
+    'summary': 'Textile weaving / job-work: orders, receipts, looms, allocation',
     'depends': ['base', 'stock', 'mail'],
     'data': [
         'security/security.xml',
@@ -12,8 +12,10 @@
         'data/sequences.xml',
         'data/fabric_sequence.xml',
         'views/menus.xml',
+        'views/order_views.xml',
         'views/yarn_bag_views.xml',
         'views/pavu_receipt_views.xml',
+        'views/empty_roll_views.xml',
         'views/loom_views.xml',
         'views/yarn_allocation_views.xml',
         'views/fabric_production_views.xml',

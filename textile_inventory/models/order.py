@@ -1,0 +1,192 @@
+from odoo import api, fields, models
+from odoo.exceptions import UserError, ValidationError
+
+
+class TextileOrder(models.Model):
+    """Vendor order: the spine that receipts, allocation, production and
+    dispatch will all link to."""
+
+    _name = 'textile.order'
+    _description = 'Vendor Order'
+    _inherit = ['mail.thread']
+    _order = 'id desc'
+
+    name = fields.Char(
+        string='Order No.', default='New', readonly=True, copy=False,
+    )
+    order_ref = fields.Char(
+        string='Vendor Order Ref.', required=True, tracking=True,
+        help='The order number given by the vendor / main mill.',
+    )
+    partner_id = fields.Many2one(
+        'res.partner', string='Vendor', required=True, tracking=True,
+    )
+    order_date = fields.Date(
+        string='Order Date', required=True, tracking=True,
+        default=fields.Date.context_today,
+    )
+    expected_date = fields.Date(string='Expected Completion', tracking=True)
+    required_fabric_m = fields.Float(
+        string='Required Fabric (m)', required=True, tracking=True,
+    )
+    expected_yarn_kg = fields.Float(string='Expected Yarn (kg)', tracking=True)
+    expected_pavu_m = fields.Float(string='Expected Pavu (m)', tracking=True)
+    roll_length_min = fields.Float(
+        string='Fabric Roll Min Length (m)', default=130.0,
+        help='Approximate finished roll length. Configurable per order.',
+    )
+    roll_length_max = fields.Float(
+        string='Fabric Roll Max Length (m)', default=140.0,
+    )
+    state = fields.Selection(
+        [('draft', 'Draft'), ('open', 'Open'),
+         ('done', 'Completed'), ('cancel', 'Cancelled')],
+        string='Status', default='draft', readonly=True, copy=False,
+        tracking=True,
+    )
+    notes = fields.Text(string='Notes')
+
+    yarn_receipt_ids = fields.One2many(
+        'textile.yarn.bag.line', 'order_id', string='Yarn Receipts')
+    pavu_receipt_ids = fields.One2many(
+        'textile.pavu.receipt', 'order_id', string='Pavu Receipts')
+    allocation_ids = fields.One2many(
+        'textile.yarn.allocation', 'order_id', string='Yarn Allocations')
+
+    yarn_received_kg = fields.Float(
+        string='Yarn Received (kg)', compute='_compute_progress')
+    yarn_pending_kg = fields.Float(
+        string='Yarn Pending (kg)', compute='_compute_progress')
+    yarn_allocated_kg = fields.Float(
+        string='Yarn on Looms (kg)', compute='_compute_progress')
+    pavu_received_m = fields.Float(
+        string='Pavu Received (m)', compute='_compute_progress')
+    pavu_pending_m = fields.Float(
+        string='Pavu Pending (m)', compute='_compute_progress')
+
+    yarn_receipt_count = fields.Integer(compute='_compute_counts')
+    pavu_receipt_count = fields.Integer(compute='_compute_counts')
+    allocation_count = fields.Integer(compute='_compute_counts')
+
+    _ref_partner_uniq = models.Constraint(
+        'UNIQUE(partner_id, order_ref)',
+        'This vendor already has an order with the same reference.',
+    )
+
+    @api.depends(
+        'yarn_receipt_ids.state', 'yarn_receipt_ids.total_weight',
+        'pavu_receipt_ids.state', 'pavu_receipt_ids.total_metres',
+        'allocation_ids.state', 'allocation_ids.quantity',
+        'expected_yarn_kg', 'expected_pavu_m',
+    )
+    def _compute_progress(self):
+        for order in self:
+            yarn = order.yarn_receipt_ids.filtered(lambda r: r.state == 'done')
+            pavu = order.pavu_receipt_ids.filtered(lambda r: r.state == 'done')
+            alloc = order.allocation_ids.filtered(lambda a: a.state == 'allocated')
+            order.yarn_received_kg = sum(yarn.mapped('total_weight'))
+            order.pavu_received_m = sum(pavu.mapped('total_metres'))
+            order.yarn_allocated_kg = sum(alloc.mapped('quantity'))
+            order.yarn_pending_kg = max(
+                order.expected_yarn_kg - order.yarn_received_kg, 0.0)
+            order.pavu_pending_m = max(
+                order.expected_pavu_m - order.pavu_received_m, 0.0)
+
+    @api.depends('yarn_receipt_ids', 'pavu_receipt_ids', 'allocation_ids')
+    def _compute_counts(self):
+        for order in self:
+            order.yarn_receipt_count = len(order.yarn_receipt_ids)
+            order.pavu_receipt_count = len(order.pavu_receipt_ids)
+            order.allocation_count = len(order.allocation_ids)
+
+    @api.constrains('required_fabric_m', 'expected_yarn_kg', 'expected_pavu_m',
+                    'roll_length_min', 'roll_length_max')
+    def _check_quantities(self):
+        for order in self:
+            if order.required_fabric_m <= 0:
+                raise ValidationError('Required fabric must be greater than zero.')
+            if order.expected_yarn_kg < 0 or order.expected_pavu_m < 0:
+                raise ValidationError('Expected quantities cannot be negative.')
+            if order.roll_length_min <= 0 or order.roll_length_max < order.roll_length_min:
+                raise ValidationError(
+                    'Fabric roll length: minimum must be above zero and not '
+                    'more than the maximum.')
+
+    @api.constrains('order_date', 'expected_date')
+    def _check_dates(self):
+        for order in self:
+            if order.expected_date and order.expected_date < order.order_date:
+                raise ValidationError(
+                    'Expected completion cannot be before the order date.')
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get('name', 'New') == 'New':
+                vals['name'] = (
+                    self.env['ir.sequence'].next_by_code('textile.order') or 'New')
+        return super().create(vals_list)
+
+    def unlink(self):
+        self.check_access('unlink')
+        if any(order.state not in ('draft', 'cancel') for order in self):
+            raise UserError('Only draft or cancelled orders can be deleted.')
+        if any(order.yarn_receipt_ids or order.pavu_receipt_ids
+               or order.allocation_ids for order in self):
+            raise UserError('This order already has receipts or allocations.')
+        return super().unlink()
+
+    # ---- status buttons -------------------------------------------------
+    def action_confirm(self):
+        for order in self:
+            if order.state != 'draft':
+                raise UserError('Only a draft order can be confirmed.')
+            order.state = 'open'
+        return True
+
+    def action_done(self):
+        for order in self:
+            if order.state != 'open':
+                raise UserError('Only an open order can be completed.')
+            order.state = 'done'
+        return True
+
+    def action_cancel(self):
+        for order in self:
+            if order.state in ('done', 'cancel'):
+                raise UserError('This order is already closed.')
+            if (order.yarn_receipt_ids.filtered(lambda r: r.state == 'done')
+                    or order.pavu_receipt_ids.filtered(lambda r: r.state == 'done')
+                    or order.allocation_ids.filtered(lambda a: a.state == 'allocated')):
+                raise UserError(
+                    'Stock has already been received or allocated for this '
+                    'order, so it cannot be cancelled. Complete it instead.')
+            order.state = 'cancel'
+        return True
+
+    def action_draft(self):
+        for order in self:
+            if order.state != 'cancel':
+                raise UserError('Only a cancelled order can be set back to draft.')
+            order.state = 'draft'
+        return True
+
+    # ---- stat buttons ---------------------------------------------------
+    def _open_list(self, title, model):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window', 'name': title, 'res_model': model,
+            'view_mode': 'list,form',
+            'domain': [('order_id', '=', self.id)],
+            'context': {'default_order_id': self.id,
+                        'default_partner_id': self.partner_id.id},
+        }
+
+    def action_view_yarn_receipts(self):
+        return self._open_list('Yarn Receipts', 'textile.yarn.bag.line')
+
+    def action_view_pavu_receipts(self):
+        return self._open_list('Pavu Receipts', 'textile.pavu.receipt')
+
+    def action_view_allocations(self):
+        return self._open_list('Yarn Allocations', 'textile.yarn.allocation')

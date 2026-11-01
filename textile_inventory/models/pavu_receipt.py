@@ -21,7 +21,10 @@ class PavuReceipt(models.Model):
     partner_id = fields.Many2one(
         'res.partner', string='Vendor', tracking=True,
     )
-    order_ref = fields.Char(string='Vendor Order Ref.', tracking=True)
+    order_id = fields.Many2one(
+        'textile.order', string='Vendor Order', tracking=True,
+        domain=[('state', '=', 'open')],
+    )
     vehicle_no = fields.Char(string='Vehicle No.')
     product_id = fields.Many2one(
         'product.product', string='Pavu Product', required=True,
@@ -51,6 +54,11 @@ class PavuReceipt(models.Model):
         for record in self:
             record.total_rolls = sum(record.line_ids.mapped('number_of_rolls'))
             record.total_metres = sum(record.line_ids.mapped('total_metres'))
+
+    @api.onchange('order_id')
+    def _onchange_order_id(self):
+        if self.order_id:
+            self.partner_id = self.order_id.partner_id
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -85,9 +93,8 @@ class PavuReceipt(models.Model):
 
             warehouse = record._textile_warehouse()
             picking_type = warehouse.in_type_id
-            origin = record.name
-            if record.order_ref:
-                origin = '%s / %s' % (record.name, record.order_ref)
+            record._textile_check_order(record.order_id, record.partner_id)
+            origin = record._textile_origin(record.name, record.order_id)
             picking = record._textile_transfer(
                 picking_type, record.partner_id, origin, record.product_id,
                 record.total_metres, uom,
@@ -114,6 +121,11 @@ class PavuReceiptLine(models.Model):
     total_metres = fields.Float(
         string='Metres', compute='_compute_total_metres', store=True,
     )
+    state = fields.Selection(related='receipt_id.state', store=True)
+    date = fields.Date(related='receipt_id.date', store=True)
+    order_id = fields.Many2one(related='receipt_id.order_id', store=True)
+    partner_id = fields.Many2one(related='receipt_id.partner_id', store=True)
+    product_id = fields.Many2one(related='receipt_id.product_id', store=True)
 
     @api.depends('roll_length', 'number_of_rolls')
     def _compute_total_metres(self):

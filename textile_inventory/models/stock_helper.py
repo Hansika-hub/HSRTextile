@@ -30,6 +30,23 @@ class TextileStockMixin(models.AbstractModel):
             raise
         self.invalidate_recordset()
 
+    def _textile_check_order(self, order, partner):
+        if not order:
+            raise UserError('Please select the vendor order for this document.')
+        if order.state != 'open':
+            label = dict(order._fields['state'].selection).get(order.state)
+            raise UserError(
+                'Order %s is not open (status: %s). Confirm the order first.'
+                % (order.name, label))
+        if partner and partner != order.partner_id:
+            raise UserError(
+                'The vendor does not match the vendor of order %s.' % order.name)
+
+    def _textile_origin(self, name, order):
+        if order:
+            return '%s / %s (%s)' % (name, order.name, order.order_ref)
+        return name
+
     def _textile_warehouse(self):
         warehouse = self.env['stock.warehouse'].search(
             [('company_id', '=', self.env.company.id)], limit=1

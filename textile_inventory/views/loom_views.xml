@@ -4,10 +4,15 @@
         <field name="name">textile.loom.list</field>
         <field name="model">textile.loom</field>
         <field name="arch" type="xml">
-            <list string="Looms">
+            <list string="Looms" decoration-danger="status == 'breakdown'" decoration-success="status == 'running'">
                 <field name="code"/>
                 <field name="name"/>
+                <field name="status" widget="badge"
+                       decoration-success="status == 'running'"
+                       decoration-danger="status == 'breakdown'"
+                       decoration-muted="status == 'idle'"/>
                 <field name="allocation_count"/>
+                <field name="breakdown_count"/>
             </list>
         </field>
     </record>
@@ -19,9 +24,11 @@
             <form string="Loom">
                 <sheet>
                     <div class="oe_button_box" name="button_box">
-                        <button name="action_view_allocations" type="object"
-                                class="oe_stat_button" icon="fa-list">
+                        <button name="action_view_allocations" type="object" class="oe_stat_button" icon="fa-list">
                             <field name="allocation_count" widget="statinfo" string="Allocations"/>
+                        </button>
+                        <button name="action_view_breakdowns" type="object" class="oe_stat_button" icon="fa-wrench">
+                            <field name="breakdown_count" widget="statinfo" string="Breakdowns"/>
                         </button>
                     </div>
                     <widget name="web_ribbon" title="Archived" bg_color="text-bg-danger" invisible="active"/>
@@ -32,9 +39,31 @@
                             <field name="active" invisible="1"/>
                         </group>
                         <group>
-                            <field name="notes"/>
+                            <field name="status" widget="badge"
+                                   decoration-success="status == 'running'"
+                                   decoration-danger="status == 'breakdown'"
+                                   decoration-muted="status == 'idle'"/>
+                            <field name="working_state" invisible="status == 'breakdown'"/>
                         </group>
                     </group>
+                    <notebook>
+                        <page string="Breakdowns">
+                            <field name="breakdown_ids">
+                                <list editable="bottom" decoration-danger="is_open">
+                                    <field name="start_datetime"/>
+                                    <field name="reason"/>
+                                    <field name="end_datetime"/>
+                                    <field name="duration_hours"/>
+                                    <field name="is_open" column_invisible="1"/>
+                                    <button name="action_resolve" type="object" string="Mark repaired"
+                                            icon="fa-check" invisible="not is_open or not id"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Notes">
+                            <field name="notes"/>
+                        </page>
+                    </notebook>
                 </sheet>
                 <chatter/>
             </form>
@@ -49,4 +78,76 @@
 
     <menuitem id="menu_loom" name="Loom List"
               parent="menu_textile_looms_root" action="action_loom" sequence="10"/>
+
+    <!-- Breakdown log (all looms) -->
+    <record id="view_loom_breakdown_list" model="ir.ui.view">
+        <field name="name">textile.loom.breakdown.list</field>
+        <field name="model">textile.loom.breakdown</field>
+        <field name="arch" type="xml">
+            <list string="Loom Breakdowns" decoration-danger="is_open">
+                <field name="loom_id"/>
+                <field name="start_datetime"/>
+                <field name="reason"/>
+                <field name="end_datetime"/>
+                <field name="duration_hours" sum="Total hours"/>
+                <field name="reported_by_id"/>
+                <field name="is_open" column_invisible="1"/>
+                <button name="action_resolve" type="object" string="Mark repaired"
+                        icon="fa-check" invisible="not is_open"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_loom_breakdown_form" model="ir.ui.view">
+        <field name="name">textile.loom.breakdown.form</field>
+        <field name="model">textile.loom.breakdown</field>
+        <field name="arch" type="xml">
+            <form string="Loom Breakdown">
+                <header>
+                    <button name="action_resolve" string="Mark Repaired" type="object"
+                            class="btn-primary" invisible="not is_open"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="loom_id" options="{'no_create': True}"/>
+                            <field name="reason"/>
+                            <field name="reported_by_id"/>
+                        </group>
+                        <group>
+                            <field name="start_datetime"/>
+                            <field name="end_datetime"/>
+                            <field name="duration_hours"/>
+                            <field name="is_open" invisible="1"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_loom_breakdown_search" model="ir.ui.view">
+        <field name="name">textile.loom.breakdown.search</field>
+        <field name="model">textile.loom.breakdown</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="loom_id"/>
+                <field name="reason"/>
+                <filter name="open" string="Still broken" domain="[('end_datetime','=',False)]"/>
+                <group>
+                    <filter name="by_loom" string="Loom" context="{'group_by': 'loom_id'}"/>
+                    <filter name="by_month" string="Month" context="{'group_by': 'start_datetime:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_loom_breakdown" model="ir.actions.act_window">
+        <field name="name">Loom Breakdowns</field>
+        <field name="res_model">textile.loom.breakdown</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="menu_loom_breakdown" name="Breakdowns"
+              parent="menu_textile_looms_root" action="action_loom_breakdown" sequence="30"/>
 </odoo>

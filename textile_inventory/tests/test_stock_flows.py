@@ -28,6 +28,11 @@ class TestTextileFlows(TransactionCase):
         cls.vendor = cls.env['res.partner'].create({'name': 'TEST Vendor'})
         cls.loom = cls.env['textile.loom'].create(
             {'name': 'Test Loom 1', 'code': 'TL-01'})
+        cls.order = cls.env['textile.order'].create({
+            'order_ref': 'PO-TEST', 'partner_id': cls.vendor.id,
+            'required_fabric_m': 5000, 'expected_yarn_kg': 1000,
+            'expected_pavu_m': 10000})
+        cls.order.action_confirm()
 
     # ---- helpers -------------------------------------------------------
     def _qty(self, product, location):
@@ -37,7 +42,7 @@ class TestTextileFlows(TransactionCase):
         return self.env['textile.yarn.bag.line'].create({
             'product_id': (product or self.yarn).id,
             'partner_id': self.vendor.id,
-            'order_ref': 'PO-TEST',
+            'order_id': self.order.id,
             'bag_size': size,
             'number_of_bags': bags,
         })
@@ -92,6 +97,7 @@ class TestTextileFlows(TransactionCase):
         return self.env['textile.pavu.receipt'].create({
             'product_id': self.pavu.id,
             'partner_id': self.vendor.id,
+            'order_id': self.order.id,
             'line_ids': [Command.create(
                 {'roll_length': length, 'number_of_rolls': n})
                 for length, n in lines],
@@ -119,6 +125,7 @@ class TestTextileFlows(TransactionCase):
     # ---- allocation ----------------------------------------------------
     def _allocation(self, qty):
         return self.env['textile.yarn.allocation'].create({
+            'order_id': self.order.id,
             'product_id': self.yarn.id, 'loom_id': self.loom.id, 'quantity': qty,
         })
 
@@ -166,6 +173,7 @@ class TestTextileFlows(TransactionCase):
     def test_inventory_manager_can_receive(self):
         user = self._user('t_inventory', 'textile_inventory.group_textile_inventory')
         receipt = self.env['textile.yarn.bag.line'].with_user(user).create({
+            'order_id': self.order.id,
             'product_id': self.yarn.id, 'bag_size': 50, 'number_of_bags': 2})
         receipt.action_receive()
         self.assertEqual(self._qty(self.yarn, self.godown), 100)
@@ -177,6 +185,7 @@ class TestTextileFlows(TransactionCase):
             self.env['textile.yarn.bag.line'].with_user(user).create({
                 'product_id': self.yarn.id, 'bag_size': 50, 'number_of_bags': 1})
         allocation = self.env['textile.yarn.allocation'].with_user(user).create({
+            'order_id': self.order.id,
             'product_id': self.yarn.id, 'loom_id': self.loom.id, 'quantity': 10})
         allocation.action_allocate()
         self.assertEqual(self._qty(self.yarn, self.loom_loc), 10)

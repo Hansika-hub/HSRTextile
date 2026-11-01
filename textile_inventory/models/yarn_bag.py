@@ -18,9 +18,9 @@ class YarnBagLine(models.Model):
     partner_id = fields.Many2one(
         'res.partner', string='Vendor', tracking=True,
     )
-    order_ref = fields.Char(
-        string='Vendor Order Ref.', tracking=True,
-        help='Vendor order number. A proper Order record comes in a later phase.',
+    order_id = fields.Many2one(
+        'textile.order', string='Vendor Order', tracking=True,
+        domain=[('state', '=', 'open')],
     )
     vehicle_no = fields.Char(string='Vehicle No.')
     product_id = fields.Many2one(
@@ -57,6 +57,11 @@ class YarnBagLine(models.Model):
             if record.number_of_bags <= 0:
                 raise ValidationError('Number of bags must be greater than zero.')
 
+    @api.onchange('order_id')
+    def _onchange_order_id(self):
+        if self.order_id:
+            self.partner_id = self.order_id.partner_id
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
@@ -90,9 +95,8 @@ class YarnBagLine(models.Model):
 
             warehouse = record._textile_warehouse()
             picking_type = warehouse.in_type_id
-            origin = record.name
-            if record.order_ref:
-                origin = '%s / %s' % (record.name, record.order_ref)
+            record._textile_check_order(record.order_id, record.partner_id)
+            origin = record._textile_origin(record.name, record.order_id)
             picking = record._textile_transfer(
                 picking_type, record.partner_id, origin, record.product_id,
                 record.total_weight, uom,

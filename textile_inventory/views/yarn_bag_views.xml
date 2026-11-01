@@ -8,7 +8,7 @@
                 <field name="name"/>
                 <field name="date"/>
                 <field name="partner_id"/>
-                <field name="order_ref"/>
+                <field name="order_id"/>
                 <field name="product_id"/>
                 <field name="bag_size"/>
                 <field name="number_of_bags"/>
@@ -36,7 +36,7 @@
                         <group string="Receipt">
                             <field name="date" readonly="state == 'done'"/>
                             <field name="partner_id" readonly="state == 'done'"/>
-                            <field name="order_ref" readonly="state == 'done'"/>
+                            <field name="order_id" required="1" options="{'no_create': True}" readonly="state == 'done'"/>
                             <field name="vehicle_no" readonly="state == 'done'"/>
                         </group>
                         <group string="Yarn">
@@ -63,7 +63,7 @@
             <search>
                 <field name="name"/>
                 <field name="partner_id"/>
-                <field name="order_ref"/>
+                <field name="order_id"/>
                 <field name="product_id"/>
                 <filter name="draft" string="Draft" domain="[('state','=','draft')]"/>
                 <filter name="done" string="Received" domain="[('state','=','done')]"/>
