@@ -47,3 +47,7 @@ access_roll_accountant,fabric roll accountant,model_textile_fabric_roll,group_te
 access_roll_supervisor,fabric roll supervisor,model_textile_fabric_roll,group_textile_supervisor,1,1,1,0
 access_roll_inventory,fabric roll inventory,model_textile_fabric_roll,group_textile_inventory,1,1,1,0
 access_roll_admin,fabric roll admin,model_textile_fabric_roll,group_textile_admin,1,1,1,1
+access_prodworker_accountant,production worker accountant,model_textile_production_worker,group_textile_accountant,1,0,0,0
+access_prodworker_supervisor,production worker supervisor,model_textile_production_worker,group_textile_supervisor,1,1,1,1
+access_prodworker_inventory,production worker inventory,model_textile_production_worker,group_textile_inventory,1,0,0,0
+access_prodworker_admin,production worker admin,model_textile_production_worker,group_textile_admin,1,1,1,1

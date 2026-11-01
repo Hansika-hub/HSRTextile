@@ -20,6 +20,8 @@ class TestProductionRolls(TransactionCase):
         cls.loom = cls.env['textile.loom'].create({'name': 'T4 Loom', 'code': 'T4-01'})
         cls.loom2 = cls.env['textile.loom'].create({'name': 'T4 Loom 2', 'code': 'T4-02'})
         cls.worker = cls.env['textile.worker'].create({'name': 'T4 Worker'})
+        cls.worker2 = cls.env['textile.worker'].create({'name': 'T4 Worker 2'})
+        cls.worker3 = cls.env['textile.worker'].create({'name': 'T4 Worker 3'})
         cls.finished = cls.env.ref('textile_inventory.location_finished_fabric')
         cls.counter = 0
 
@@ -33,10 +35,11 @@ class TestProductionRolls(TransactionCase):
         return order
 
     def _entry(self, order, produced=200, damaged=0, waste=0, rejected=0,
-               loom=None, shift='day', date='2026-11-01', confirm=True):
+               loom=None, shift='day', date='2026-11-01', workers=None, confirm=True):
         entry = self.env['textile.production'].create({
             'order_id': order.id, 'loom_id': (loom or self.loom).id,
-            'worker_id': self.worker.id, 'shift': shift, 'date': date,
+            'line_ids': [Command.create({'worker_id': w.id}) for w in (workers or self.worker)],
+            'shift': shift, 'date': date,
             'metres_produced': produced, 'metres_damaged': damaged,
             'metres_waste': waste, 'metres_rejected': rejected})
         if confirm:
@@ -207,7 +210,8 @@ class TestProductionRolls(TransactionCase):
         accountant = user('t4_acc', 'textile_inventory.group_textile_accountant')
         manager = user('t4_inv', 'textile_inventory.group_textile_inventory')
         order = self._order()
-        vals = {'order_id': order.id, 'loom_id': self.loom.id, 'worker_id': self.worker.id,
+        vals = {'order_id': order.id, 'loom_id': self.loom.id,
+                'line_ids': [Command.create({'worker_id': self.worker.id})],
                 'metres_produced': 120, 'date': '2026-12-01'}
         entry = self.env['textile.production'].with_user(supervisor).create(vals)
         entry.action_confirm()
@@ -225,3 +229,79 @@ class TestProductionRolls(TransactionCase):
         self.assertEqual(roll.state, 'available')
         with self.assertRaises(AccessError):
             roll.with_user(accountant).write({'notes': 'x'})
+
+    # ---- two or more workers share a loom --------------------------------
+    def test_two_workers_equal_split(self):
+        order = self._order()
+        entry = self._entry(order, produced=200, damaged=10,
+                            workers=self.worker + self.worker2)
+        self.assertEqual(sorted(entry.line_ids.mapped('share_metres')), [95, 95])
+        self.assertEqual(entry.worker_ids, self.worker + self.worker2)
+
+    def test_odd_split_adds_up_exactly(self):
+        order = self._order()
+        entry = self._entry(order, produced=190,
+                            workers=self.worker + self.worker2 + self.worker3)
+        self.assertAlmostEqual(sum(entry.line_ids.mapped('share_metres')), 190, places=2)
+
+    def test_manual_split_is_kept(self):
+        order = self._order()
+        entry = self.env['textile.production'].create({
+            'order_id': order.id, 'loom_id': self.loom.id, 'date': '2026-11-05',
+            'metres_produced': 200,
+            'line_ids': [Command.create({'worker_id': self.worker.id, 'share_metres': 120}),
+                         Command.create({'worker_id': self.worker2.id, 'share_metres': 80})]})
+        entry.action_confirm()
+        self.assertEqual(entry.line_ids.filtered(
+            lambda l: l.worker_id == self.worker).share_metres, 120)
+
+    def test_split_must_match_good_metres(self):
+        order = self._order()
+        entry = self.env['textile.production'].create({
+            'order_id': order.id, 'loom_id': self.loom.id, 'date': '2026-11-06',
+            'metres_produced': 200,
+            'line_ids': [Command.create({'worker_id': self.worker.id, 'share_metres': 100}),
+                         Command.create({'worker_id': self.worker2.id, 'share_metres': 50})]})
+        with self.assertRaises(UserError):
+            entry.action_confirm()
+        self.assertEqual(entry.state, 'draft')
+
+    def test_entry_needs_a_worker_and_no_duplicates(self):
+        order = self._order()
+        empty = self.env['textile.production'].create({
+            'order_id': order.id, 'loom_id': self.loom.id, 'date': '2026-11-07',
+            'metres_produced': 100})
+        with self.assertRaises(UserError):
+            empty.action_confirm()
+        with self.assertRaises(Exception), mute_logger('odoo.sql_db'):
+            self.env['textile.production'].create({
+                'order_id': order.id, 'loom_id': self.loom.id, 'date': '2026-11-08',
+                'metres_produced': 100,
+                'line_ids': [Command.create({'worker_id': self.worker.id}),
+                             Command.create({'worker_id': self.worker.id})]})
+
+    def test_confirmed_worker_lines_are_locked(self):
+        order = self._order()
+        entry = self._entry(order, workers=self.worker + self.worker2)
+        line = entry.line_ids[0]
+        with self.assertRaises(UserError):
+            line.share_metres = 1
+        with self.assertRaises(UserError):
+            line.unlink()
+        with self.assertRaises(UserError):
+            self.env['textile.production.worker'].create(
+                {'production_id': entry.id, 'worker_id': self.worker3.id})
+        with self.assertRaises(UserError):
+            entry.write({'line_ids': [Command.delete(line.id)]})
+
+    def test_worker_wise_production_summary(self):
+        order = self._order()
+        self._entry(order, produced=200, workers=self.worker + self.worker2)             # 100 each
+        self._entry(order, produced=90, shift='night', workers=self.worker)               # 90
+        self._entry(order, produced=500, loom=self.loom2, workers=self.worker2, confirm=False)  # draft
+        Line = self.env['textile.production.worker']
+        mine = Line.search([('worker_id', '=', self.worker.id), ('production_state', '=', 'confirmed')])
+        other = Line.search([('worker_id', '=', self.worker2.id), ('production_state', '=', 'confirmed')])
+        self.assertEqual(sum(mine.mapped('share_metres')), 190)
+        self.assertEqual(sum(other.mapped('share_metres')), 100)
+        self.assertEqual(set(mine.mapped('shift')), {'day', 'night'})
