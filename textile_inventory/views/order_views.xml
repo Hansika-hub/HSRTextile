@@ -11,6 +11,8 @@
                 <field name="order_date"/>
                 <field name="expected_date"/>
                 <field name="required_fabric_m" sum="Fabric m"/>
+                <field name="fabric_produced_m" sum="Woven m"/>
+                <field name="fabric_pending_m" sum="To weave m"/>
                 <field name="yarn_received_kg" sum="Yarn kg"/>
                 <field name="yarn_pending_kg" sum="Pending kg"/>
                 <field name="pavu_received_m" sum="Pavu m"/>
@@ -49,6 +51,12 @@
                         <button name="action_view_allocations" type="object" class="oe_stat_button" icon="fa-list">
                             <field name="allocation_count" widget="statinfo" string="Allocations"/>
                         </button>
+                        <button name="action_view_production" type="object" class="oe_stat_button" icon="fa-industry">
+                            <field name="production_count" widget="statinfo" string="Production"/>
+                        </button>
+                        <button name="action_view_rolls" type="object" class="oe_stat_button" icon="fa-th-large">
+                            <field name="roll_count" widget="statinfo" string="Fabric Rolls"/>
+                        </button>
                     </div>
                     <div class="oe_title"><h1><field name="name"/></h1></div>
                     <group>
@@ -78,6 +86,19 @@
                         <group>
                             <field name="pavu_received_m" class="fs-4 fw-bold"/>
                             <field name="pavu_pending_m"/>
+                        </group>
+                    </group>
+                    <group string="Fabric (confirmed production only)">
+                        <group>
+                            <field name="fabric_produced_m" class="fs-4 fw-bold"/>
+                            <field name="fabric_pending_m"/>
+                            <field name="fabric_rolled_m"/>
+                            <field name="fabric_unrolled_m"/>
+                        </group>
+                        <group>
+                            <field name="fabric_damaged_m"/>
+                            <field name="fabric_waste_m"/>
+                            <field name="fabric_rejected_m"/>
                         </group>
                     </group>
                     <group string="Notes">

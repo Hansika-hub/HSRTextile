@@ -35,3 +35,15 @@ access_emptyroll_accountant,empty roll accountant,model_textile_empty_roll_log,g
 access_emptyroll_supervisor,empty roll supervisor,model_textile_empty_roll_log,group_textile_supervisor,1,1,1,0
 access_emptyroll_inventory,empty roll inventory,model_textile_empty_roll_log,group_textile_inventory,1,1,1,1
 access_emptyroll_admin,empty roll admin,model_textile_empty_roll_log,group_textile_admin,1,1,1,1
+access_worker_accountant,worker accountant,model_textile_worker,group_textile_accountant,1,0,0,0
+access_worker_supervisor,worker supervisor,model_textile_worker,group_textile_supervisor,1,1,1,0
+access_worker_inventory,worker inventory,model_textile_worker,group_textile_inventory,1,0,0,0
+access_worker_admin,worker admin,model_textile_worker,group_textile_admin,1,1,1,1
+access_production_accountant,production accountant,model_textile_production,group_textile_accountant,1,0,0,0
+access_production_supervisor,production supervisor,model_textile_production,group_textile_supervisor,1,1,1,0
+access_production_inventory,production inventory,model_textile_production,group_textile_inventory,1,0,0,0
+access_production_admin,production admin,model_textile_production,group_textile_admin,1,1,1,1
+access_roll_accountant,fabric roll accountant,model_textile_fabric_roll,group_textile_accountant,1,0,0,0
+access_roll_supervisor,fabric roll supervisor,model_textile_fabric_roll,group_textile_supervisor,1,1,1,0
+access_roll_inventory,fabric roll inventory,model_textile_fabric_roll,group_textile_inventory,1,1,1,0
+access_roll_admin,fabric roll admin,model_textile_fabric_roll,group_textile_admin,1,1,1,1

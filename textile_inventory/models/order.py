@@ -64,6 +64,29 @@ class TextileOrder(models.Model):
     pavu_pending_m = fields.Float(
         string='Pavu Pending (m)', compute='_compute_progress')
 
+    production_ids = fields.One2many(
+        'textile.production', 'order_id', string='Production Entries')
+    roll_ids = fields.One2many(
+        'textile.fabric.roll', 'order_id', string='Fabric Rolls')
+    fabric_produced_m = fields.Float(
+        string='Good Fabric Produced (m)', compute='_compute_progress')
+    fabric_damaged_m = fields.Float(
+        string='Damaged (m)', compute='_compute_progress')
+    fabric_waste_m = fields.Float(
+        string='Waste (m)', compute='_compute_progress')
+    fabric_rejected_m = fields.Float(
+        string='Rejected (m)', compute='_compute_progress')
+    fabric_pending_m = fields.Float(
+        string='Fabric Still To Weave (m)', compute='_compute_progress')
+    fabric_rolled_m = fields.Float(
+        string='Finished Rolls (m)', compute='_compute_progress',
+        help='Total length of confirmed fabric rolls.')
+    fabric_unrolled_m = fields.Float(
+        string='Woven, Not Yet Rolled (m)', compute='_compute_progress',
+        help='Good fabric produced minus finished rolls. A negative value '
+             'means more was rolled than was recorded as produced.')
+    production_count = fields.Integer(compute='_compute_counts')
+    roll_count = fields.Integer(compute='_compute_counts')
     yarn_receipt_count = fields.Integer(compute='_compute_counts')
     pavu_receipt_count = fields.Integer(compute='_compute_counts')
     allocation_count = fields.Integer(compute='_compute_counts')
@@ -77,7 +100,11 @@ class TextileOrder(models.Model):
         'yarn_receipt_ids.state', 'yarn_receipt_ids.total_weight',
         'pavu_receipt_ids.state', 'pavu_receipt_ids.total_metres',
         'allocation_ids.state', 'allocation_ids.quantity',
-        'expected_yarn_kg', 'expected_pavu_m',
+        'expected_yarn_kg', 'expected_pavu_m', 'required_fabric_m',
+        'production_ids.state', 'production_ids.good_metres',
+        'production_ids.metres_damaged', 'production_ids.metres_waste',
+        'production_ids.metres_rejected',
+        'roll_ids.state', 'roll_ids.length_m',
     )
     def _compute_progress(self):
         for order in self:
@@ -91,10 +118,24 @@ class TextileOrder(models.Model):
                 order.expected_yarn_kg - order.yarn_received_kg, 0.0)
             order.pavu_pending_m = max(
                 order.expected_pavu_m - order.pavu_received_m, 0.0)
+            prod = order.production_ids.filtered(lambda p: p.state == 'confirmed')
+            rolls = order.roll_ids.filtered(
+                lambda r: r.state in ('available', 'dispatched'))
+            order.fabric_produced_m = sum(prod.mapped('good_metres'))
+            order.fabric_damaged_m = sum(prod.mapped('metres_damaged'))
+            order.fabric_waste_m = sum(prod.mapped('metres_waste'))
+            order.fabric_rejected_m = sum(prod.mapped('metres_rejected'))
+            order.fabric_pending_m = max(
+                order.required_fabric_m - order.fabric_produced_m, 0.0)
+            order.fabric_rolled_m = sum(rolls.mapped('length_m'))
+            order.fabric_unrolled_m = order.fabric_produced_m - order.fabric_rolled_m
 
-    @api.depends('yarn_receipt_ids', 'pavu_receipt_ids', 'allocation_ids')
+    @api.depends('yarn_receipt_ids', 'pavu_receipt_ids', 'allocation_ids',
+                 'production_ids', 'roll_ids')
     def _compute_counts(self):
         for order in self:
+            order.production_count = len(order.production_ids)
+            order.roll_count = len(order.roll_ids)
             order.yarn_receipt_count = len(order.yarn_receipt_ids)
             order.pavu_receipt_count = len(order.pavu_receipt_ids)
             order.allocation_count = len(order.allocation_ids)
@@ -132,7 +173,8 @@ class TextileOrder(models.Model):
         if any(order.state not in ('draft', 'cancel') for order in self):
             raise UserError('Only draft or cancelled orders can be deleted.')
         if any(order.yarn_receipt_ids or order.pavu_receipt_ids
-               or order.allocation_ids for order in self):
+               or order.allocation_ids or order.production_ids
+               or order.roll_ids for order in self):
             raise UserError('This order already has receipts or allocations.')
         return super().unlink()
 
@@ -157,7 +199,9 @@ class TextileOrder(models.Model):
                 raise UserError('This order is already closed.')
             if (order.yarn_receipt_ids.filtered(lambda r: r.state == 'done')
                     or order.pavu_receipt_ids.filtered(lambda r: r.state == 'done')
-                    or order.allocation_ids.filtered(lambda a: a.state == 'allocated')):
+                    or order.allocation_ids.filtered(lambda a: a.state == 'allocated')
+                    or order.production_ids.filtered(lambda p: p.state == 'confirmed')
+                    or order.roll_ids.filtered(lambda r: r.state != 'cancel')):
                 raise UserError(
                     'Stock has already been received or allocated for this '
                     'order, so it cannot be cancelled. Complete it instead.')
@@ -190,3 +234,9 @@ class TextileOrder(models.Model):
 
     def action_view_allocations(self):
         return self._open_list('Yarn Allocations', 'textile.yarn.allocation')
+
+    def action_view_production(self):
+        return self._open_list('Production Entries', 'textile.production')
+
+    def action_view_rolls(self):
+        return self._open_list('Fabric Rolls', 'textile.fabric.roll')
