@@ -15,4 +15,7 @@
               parent="menu_textile_inventory_root" sequence="30"/>
     <menuitem id="menu_textile_dispatch_root" name="Dispatch &amp; Mill"
               parent="menu_textile_inventory_root" sequence="40"/>
+    <menuitem id="menu_textile_pay_root" name="Worker Pay"
+              parent="menu_textile_inventory_root" sequence="50"
+              groups="textile_inventory.group_textile_accountant,textile_inventory.group_textile_admin"/>
 </odoo>

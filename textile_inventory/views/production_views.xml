@@ -256,7 +256,8 @@
                 <field name="loom_id"/>
                 <field name="order_id"/>
                 <field name="production_id"/>
-                <field name="share_metres" sum="Metres"/>
+                <field name="share_metres" sum="Good metres"/>
+                <field name="payable_metres" sum="Payable metres"/>
             </list>
         </field>
     </record>
@@ -269,6 +270,7 @@
                 <field name="worker_id" type="row"/>
                 <field name="date" interval="month" type="col"/>
                 <field name="share_metres" type="measure"/>
+                <field name="payable_metres" type="measure"/>
             </pivot>
         </field>
     </record>

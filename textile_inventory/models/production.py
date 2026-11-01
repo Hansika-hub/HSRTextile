@@ -224,6 +224,11 @@ class TextileProductionWorker(models.Model):
         help='Leave at 0 on every worker for an equal split when the entry '
              'is confirmed.',
     )
+    payable_metres = fields.Float(
+        string='Payable Metres', compute='_compute_payable', store=True,
+        help='Pay is on metres produced (damaged, waste and rejected metres '
+             'are paid too). The produced metres are split in the same ratio '
+             'as the worker shares of good fabric.')
     # copies of the entry's data, so worker-wise reports are simple
     date = fields.Date(related='production_id.date', store=True)
     shift = fields.Selection(related='production_id.shift', store=True)
@@ -235,6 +240,17 @@ class TextileProductionWorker(models.Model):
         'UNIQUE(production_id, worker_id)',
         'This worker is already listed on the entry.',
     )
+
+    @api.depends('share_metres', 'production_id.metres_produced',
+                 'production_id.good_metres', 'production_id.line_ids')
+    def _compute_payable(self):
+        for line in self:
+            prod = line.production_id
+            if prod.good_metres > 0:
+                line.payable_metres = prod.metres_produced * line.share_metres / prod.good_metres
+            else:
+                count = len(prod.line_ids) or 1
+                line.payable_metres = prod.metres_produced / count
 
     @api.constrains('share_metres')
     def _check_share(self):

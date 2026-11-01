@@ -59,3 +59,9 @@ access_recon_accountant,reconciliation accountant,model_textile_reconciliation,g
 access_recon_supervisor,reconciliation supervisor,model_textile_reconciliation,group_textile_supervisor,1,0,0,0
 access_recon_inventory,reconciliation inventory,model_textile_reconciliation,group_textile_inventory,1,1,1,1
 access_recon_admin,reconciliation admin,model_textile_reconciliation,group_textile_admin,1,1,1,1
+access_payrate_accountant,pay rate accountant,model_textile_pay_rate,group_textile_accountant,1,1,1,1
+access_payrate_admin,pay rate admin,model_textile_pay_rate,group_textile_admin,1,1,1,1
+access_payment_accountant,pay sheet accountant,model_textile_worker_payment,group_textile_accountant,1,1,1,1
+access_payment_admin,pay sheet admin,model_textile_worker_payment,group_textile_admin,1,1,1,1
+access_paymentline_accountant,pay sheet line accountant,model_textile_worker_payment_line,group_textile_accountant,1,1,1,1
+access_paymentline_admin,pay sheet line admin,model_textile_worker_payment_line,group_textile_admin,1,1,1,1
