@@ -51,3 +51,11 @@ access_prodworker_accountant,production worker accountant,model_textile_producti
 access_prodworker_supervisor,production worker supervisor,model_textile_production_worker,group_textile_supervisor,1,1,1,1
 access_prodworker_inventory,production worker inventory,model_textile_production_worker,group_textile_inventory,1,0,0,0
 access_prodworker_admin,production worker admin,model_textile_production_worker,group_textile_admin,1,1,1,1
+access_dispatch_accountant,dispatch accountant,model_textile_dispatch,group_textile_accountant,1,0,0,0
+access_dispatch_supervisor,dispatch supervisor,model_textile_dispatch,group_textile_supervisor,1,0,0,0
+access_dispatch_inventory,dispatch inventory,model_textile_dispatch,group_textile_inventory,1,1,1,1
+access_dispatch_admin,dispatch admin,model_textile_dispatch,group_textile_admin,1,1,1,1
+access_recon_accountant,reconciliation accountant,model_textile_reconciliation,group_textile_accountant,1,1,1,1
+access_recon_supervisor,reconciliation supervisor,model_textile_reconciliation,group_textile_supervisor,1,0,0,0
+access_recon_inventory,reconciliation inventory,model_textile_reconciliation,group_textile_inventory,1,1,1,1
+access_recon_admin,reconciliation admin,model_textile_reconciliation,group_textile_admin,1,1,1,1

@@ -188,6 +188,7 @@
                         </group>
                         <group>
                             <field name="picking_id"/>
+                            <field name="dispatch_id"/>
                             <field name="notes"/>
                         </group>
                     </group>

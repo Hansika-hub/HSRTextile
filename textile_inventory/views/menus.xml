@@ -13,4 +13,6 @@
               parent="menu_textile_inventory_root" sequence="20"/>
     <menuitem id="menu_textile_production_root" name="Production"
               parent="menu_textile_inventory_root" sequence="30"/>
+    <menuitem id="menu_textile_dispatch_root" name="Dispatch &amp; Mill"
+              parent="menu_textile_inventory_root" sequence="40"/>
 </odoo>

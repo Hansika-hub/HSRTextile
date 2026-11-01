@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- ============ Dispatch document ============ -->
+    <record id="action_report_dispatch" model="ir.actions.report">
+        <field name="name">Dispatch Document</field>
+        <field name="model">textile.dispatch</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">textile_inventory.report_dispatch</field>
+        <field name="report_file">textile_inventory.report_dispatch</field>
+        <field name="print_report_name">'Dispatch - %s' % object.name</field>
+        <field name="binding_model_id" ref="model_textile_dispatch"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <template id="report_dispatch">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h2>Fabric Dispatch Note <span t-field="o.name"/></h2>
+                        <table class="table table-sm table-borderless">
+                            <tr>
+                                <td><strong>Date:</strong> <span t-field="o.date"/></td>
+                                <td><strong>Vehicle No.:</strong> <span t-field="o.vehicle_no"/></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Vendor / Mill:</strong> <span t-field="o.partner_id"/></td>
+                                <td><strong>Driver:</strong> <span t-field="o.driver_name"/> <span t-field="o.driver_phone"/></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Order:</strong> <span t-field="o.order_id.name"/> (<span t-field="o.vendor_ref"/>)</td>
+                                <td><strong>Destination:</strong> <span t-field="o.destination"/></td>
+                            </tr>
+                        </table>
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr><th>#</th><th>Roll No.</th><th>Date woven</th><th class="text-end">Length (m)</th></tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="o.roll_ids.sorted('name')" t-as="roll">
+                                    <tr>
+                                        <td><t t-out="roll_index + 1"/></td>
+                                        <td><span t-field="roll.name"/></td>
+                                        <td><span t-field="roll.date"/></td>
+                                        <td class="text-end"><span t-field="roll.length_m"/></td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="3"><strong>Total: <span t-field="o.roll_count"/> rolls</strong></td>
+                                    <td class="text-end"><strong><span t-field="o.total_metres"/> m</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                        <p t-if="o.notes"><strong>Notes:</strong> <span t-field="o.notes"/></p>
+                        <div class="row mt-5 pt-5">
+                            <div class="col-4">Prepared by<br/><br/>______________</div>
+                            <div class="col-4">Driver signature<br/><br/>______________</div>
+                            <div class="col-4">Received by (mill)<br/><br/>______________</div>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+    <!-- ============ Reconciliation report ============ -->
+    <record id="action_report_reconciliation" model="ir.actions.report">
+        <field name="name">Reconciliation Report</field>
+        <field name="model">textile.reconciliation</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">textile_inventory.report_reconciliation</field>
+        <field name="report_file">textile_inventory.report_reconciliation</field>
+        <field name="print_report_name">'Reconciliation - %s' % object.name</field>
+        <field name="binding_model_id" ref="model_textile_reconciliation"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <template id="report_reconciliation">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h2>Mill Reconciliation <span t-field="o.name"/></h2>
+                        <table class="table table-sm table-borderless">
+                            <tr>
+                                <td><strong>Dispatch:</strong> <span t-field="o.dispatch_id.name"/></td>
+                                <td><strong>Vehicle:</strong> <span t-field="o.dispatch_id.vehicle_no"/></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Order:</strong> <span t-field="o.order_id.name"/></td>
+                                <td><strong>Mill receipt no.:</strong> <span t-field="o.mill_ref"/></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Vendor / Mill:</strong> <span t-field="o.partner_id"/></td>
+                                <td><strong>Mill receipt date:</strong> <span t-field="o.date"/></td>
+                            </tr>
+                        </table>
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr><th></th><th class="text-end">Rolls</th><th class="text-end">Metres</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>Dispatched by us</td>
+                                    <td class="text-end"><span t-field="o.dispatched_rolls"/></td>
+                                    <td class="text-end"><span t-field="o.dispatched_m"/></td></tr>
+                                <tr><td>Received by mill</td>
+                                    <td class="text-end"><span t-field="o.rolls_received"/></td>
+                                    <td class="text-end"></td></tr>
+                                <tr><td>Accepted</td><td></td>
+                                    <td class="text-end"><span t-field="o.accepted_m"/></td></tr>
+                                <tr><td>Rejected</td><td></td>
+                                    <td class="text-end"><span t-field="o.rejected_m"/></td></tr>
+                                <tr><td><strong>Missing / difference</strong></td>
+                                    <td class="text-end"><strong><span t-field="o.missing_rolls"/></strong></td>
+                                    <td class="text-end"><strong><span t-field="o.missing_m"/></strong></td></tr>
+                            </tbody>
+                        </table>
+                        <p><strong>Status:</strong> <span t-field="o.state"/></p>
+                        <p t-if="o.remarks"><strong>Remarks:</strong> <span t-field="o.remarks"/></p>
+                        <h4 class="mt-4">History for this load</h4>
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr><th>Ref</th><th>Date</th><th class="text-end">Accepted</th>
+                                    <th class="text-end">Rejected</th><th class="text-end">Missing</th><th>Status</th></tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="o.dispatch_id.reconciliation_ids.sorted('id')" t-as="h">
+                                    <tr>
+                                        <td><span t-field="h.name"/></td>
+                                        <td><span t-field="h.date"/></td>
+                                        <td class="text-end"><span t-field="h.accepted_m"/></td>
+                                        <td class="text-end"><span t-field="h.rejected_m"/></td>
+                                        <td class="text-end"><span t-field="h.missing_m"/></td>
+                                        <td><span t-field="h.state"/></td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+    <!-- ============ Yarn receipt ============ -->
+    <record id="action_report_yarn_receipt" model="ir.actions.report">
+        <field name="name">Yarn Receipt</field>
+        <field name="model">textile.yarn.bag.line</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">textile_inventory.report_yarn_receipt</field>
+        <field name="report_file">textile_inventory.report_yarn_receipt</field>
+        <field name="print_report_name">'Yarn Receipt - %s' % object.name</field>
+        <field name="binding_model_id" ref="model_textile_yarn_bag_line"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <template id="report_yarn_receipt">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h2>Yarn Receipt <span t-field="o.name"/></h2>
+                        <table class="table table-sm table-borderless">
+                            <tr>
+                                <td><strong>Date:</strong> <span t-field="o.date"/></td>
+                                <td><strong>Vehicle:</strong> <span t-field="o.vehicle_no"/></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Vendor:</strong> <span t-field="o.partner_id"/></td>
+                                <td><strong>Order:</strong> <span t-field="o.order_id.name"/></td>
+                            </tr>
+                        </table>
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr><th>Yarn</th><th class="text-end">Bag size (kg)</th>
+                                    <th class="text-end">Bags</th><th class="text-end">Total (kg)</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><span t-field="o.product_id"/></td>
+                                    <td class="text-end"><span t-field="o.bag_size"/></td>
+                                    <td class="text-end"><span t-field="o.number_of_bags"/></td>
+                                    <td class="text-end"><strong><span t-field="o.total_weight"/></strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <p><strong>Status:</strong> <span t-field="o.state"/></p>
+                        <p t-if="o.notes"><strong>Notes:</strong> <span t-field="o.notes"/></p>
+                        <div class="row mt-5 pt-5">
+                            <div class="col-6">Received by<br/><br/>______________</div>
+                            <div class="col-6">Driver / supplier<br/><br/>______________</div>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+    <!-- ============ Pavu receipt ============ -->
+    <record id="action_report_pavu_receipt" model="ir.actions.report">
+        <field name="name">Pavu Receipt</field>
+        <field name="model">textile.pavu.receipt</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">textile_inventory.report_pavu_receipt</field>
+        <field name="report_file">textile_inventory.report_pavu_receipt</field>
+        <field name="print_report_name">'Pavu Receipt - %s' % object.name</field>
+        <field name="binding_model_id" ref="model_textile_pavu_receipt"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <template id="report_pavu_receipt">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h2>Pavu Receipt <span t-field="o.name"/></h2>
+                        <table class="table table-sm table-borderless">
+                            <tr>
+                                <td><strong>Date:</strong> <span t-field="o.date"/></td>
+                                <td><strong>Vehicle:</strong> <span t-field="o.vehicle_no"/></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Vendor:</strong> <span t-field="o.partner_id"/></td>
+                                <td><strong>Order:</strong> <span t-field="o.order_id.name"/></td>
+                            </tr>
+                        </table>
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr><th>Roll length (m)</th><th class="text-end">Number of rolls</th>
+                                    <th class="text-end">Total (m)</th></tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="o.line_ids" t-as="l">
+                                    <tr>
+                                        <td><span t-field="l.roll_length"/></td>
+                                        <td class="text-end"><span t-field="l.number_of_rolls"/></td>
+                                        <td class="text-end"><span t-field="l.total_metres"/></td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td><strong>Total</strong></td>
+                                    <td class="text-end"><strong><span t-field="o.total_rolls"/></strong></td>
+                                    <td class="text-end"><strong><span t-field="o.total_metres"/> m</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                        <p><strong>Status:</strong> <span t-field="o.state"/></p>
+                        <div class="row mt-5 pt-5">
+                            <div class="col-6">Received by<br/><br/>______________</div>
+                            <div class="col-6">Driver / supplier<br/><br/>______________</div>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

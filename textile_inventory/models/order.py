@@ -85,6 +85,21 @@ class TextileOrder(models.Model):
         string='Woven, Not Yet Rolled (m)', compute='_compute_progress',
         help='Good fabric produced minus finished rolls. A negative value '
              'means more was rolled than was recorded as produced.')
+    dispatch_ids = fields.One2many('textile.dispatch', 'order_id', string='Dispatches')
+    fabric_stock_m = fields.Float(
+        string='Finished Stock (m)', compute='_compute_progress',
+        help='Confirmed rolls still in the godown (not yet dispatched).')
+    fabric_dispatched_m = fields.Float(
+        string='Dispatched (m)', compute='_compute_progress')
+    mill_accepted_m = fields.Float(
+        string='Mill Accepted (m)', compute='_compute_progress')
+    mill_rejected_m = fields.Float(
+        string='Mill Rejected (m)', compute='_compute_progress')
+    mill_missing_m = fields.Float(
+        string='Missing at Mill (m)', compute='_compute_progress')
+    mill_pending_m = fields.Float(
+        string='Not Yet Checked by Mill (m)', compute='_compute_progress')
+    dispatch_count = fields.Integer(compute='_compute_counts')
     production_count = fields.Integer(compute='_compute_counts')
     roll_count = fields.Integer(compute='_compute_counts')
     yarn_receipt_count = fields.Integer(compute='_compute_counts')
@@ -105,6 +120,9 @@ class TextileOrder(models.Model):
         'production_ids.metres_damaged', 'production_ids.metres_waste',
         'production_ids.metres_rejected',
         'roll_ids.state', 'roll_ids.length_m',
+        'dispatch_ids.state', 'dispatch_ids.total_metres',
+        'dispatch_ids.reconciliation_state', 'dispatch_ids.mill_accepted_m',
+        'dispatch_ids.mill_rejected_m', 'dispatch_ids.mill_missing_m',
     )
     def _compute_progress(self):
         for order in self:
@@ -129,13 +147,24 @@ class TextileOrder(models.Model):
                 order.required_fabric_m - order.fabric_produced_m, 0.0)
             order.fabric_rolled_m = sum(rolls.mapped('length_m'))
             order.fabric_unrolled_m = order.fabric_produced_m - order.fabric_rolled_m
+            order.fabric_stock_m = sum(
+                rolls.filtered(lambda r: r.state == 'available').mapped('length_m'))
+            sent = order.dispatch_ids.filtered(lambda d: d.state == 'dispatched')
+            checked = sent.filtered(lambda d: d.reconciliation_state in ('matched', 'discrepancy'))
+            order.fabric_dispatched_m = sum(sent.mapped('total_metres'))
+            order.mill_accepted_m = sum(checked.mapped('mill_accepted_m'))
+            order.mill_rejected_m = sum(checked.mapped('mill_rejected_m'))
+            order.mill_missing_m = sum(checked.mapped('mill_missing_m'))
+            order.mill_pending_m = sum(
+                (sent - checked).mapped('total_metres'))
 
     @api.depends('yarn_receipt_ids', 'pavu_receipt_ids', 'allocation_ids',
-                 'production_ids', 'roll_ids')
+                 'production_ids', 'roll_ids', 'dispatch_ids')
     def _compute_counts(self):
         for order in self:
             order.production_count = len(order.production_ids)
             order.roll_count = len(order.roll_ids)
+            order.dispatch_count = len(order.dispatch_ids)
             order.yarn_receipt_count = len(order.yarn_receipt_ids)
             order.pavu_receipt_count = len(order.pavu_receipt_ids)
             order.allocation_count = len(order.allocation_ids)
@@ -174,7 +203,7 @@ class TextileOrder(models.Model):
             raise UserError('Only draft or cancelled orders can be deleted.')
         if any(order.yarn_receipt_ids or order.pavu_receipt_ids
                or order.allocation_ids or order.production_ids
-               or order.roll_ids for order in self):
+               or order.roll_ids or order.dispatch_ids for order in self):
             raise UserError('This order already has receipts or allocations.')
         return super().unlink()
 
@@ -201,6 +230,7 @@ class TextileOrder(models.Model):
                     or order.pavu_receipt_ids.filtered(lambda r: r.state == 'done')
                     or order.allocation_ids.filtered(lambda a: a.state == 'allocated')
                     or order.production_ids.filtered(lambda p: p.state == 'confirmed')
+                    or order.dispatch_ids.filtered(lambda d: d.state == 'dispatched')
                     or order.roll_ids.filtered(lambda r: r.state != 'cancel')):
                 raise UserError(
                     'Stock has already been received or allocated for this '
@@ -237,6 +267,9 @@ class TextileOrder(models.Model):
 
     def action_view_production(self):
         return self._open_list('Production Entries', 'textile.production')
+
+    def action_view_dispatches(self):
+        return self._open_list('Dispatches', 'textile.dispatch')
 
     def action_view_rolls(self):
         return self._open_list('Fabric Rolls', 'textile.fabric.roll')

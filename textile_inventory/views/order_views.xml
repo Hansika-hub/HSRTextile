@@ -54,6 +54,9 @@
                         <button name="action_view_production" type="object" class="oe_stat_button" icon="fa-industry">
                             <field name="production_count" widget="statinfo" string="Production"/>
                         </button>
+                        <button name="action_view_dispatches" type="object" class="oe_stat_button" icon="fa-truck">
+                            <field name="dispatch_count" widget="statinfo" string="Dispatches"/>
+                        </button>
                         <button name="action_view_rolls" type="object" class="oe_stat_button" icon="fa-th-large">
                             <field name="roll_count" widget="statinfo" string="Fabric Rolls"/>
                         </button>
@@ -99,6 +102,18 @@
                             <field name="fabric_damaged_m"/>
                             <field name="fabric_waste_m"/>
                             <field name="fabric_rejected_m"/>
+                        </group>
+                    </group>
+                    <group string="Dispatch and Mill">
+                        <group>
+                            <field name="fabric_stock_m" class="fs-4 fw-bold"/>
+                            <field name="fabric_dispatched_m"/>
+                            <field name="mill_pending_m"/>
+                        </group>
+                        <group>
+                            <field name="mill_accepted_m"/>
+                            <field name="mill_rejected_m"/>
+                            <field name="mill_missing_m"/>
                         </group>
                     </group>
                     <group string="Notes">

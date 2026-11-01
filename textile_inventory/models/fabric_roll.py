@@ -50,6 +50,9 @@ class FabricRoll(models.Model):
         string='Status', default='draft', readonly=True, copy=False,
         tracking=True,
     )
+    dispatch_id = fields.Many2one(
+        'textile.dispatch', string='Dispatch', readonly=True, copy=False,
+        ondelete='set null')
     notes = fields.Char(string='Notes')
 
     _name_uniq = models.Constraint('UNIQUE(name)', 'Roll number must be unique.')
