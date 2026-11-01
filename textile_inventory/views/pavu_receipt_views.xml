@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_pavu_receipt_list" model="ir.ui.view">
+        <field name="name">textile.pavu.receipt.list</field>
+        <field name="model">textile.pavu.receipt</field>
+        <field name="arch" type="xml">
+            <list string="Pavu Receipts" decoration-success="state == 'done'">
+                <field name="name"/>
+                <field name="date"/>
+                <field name="partner_id"/>
+                <field name="order_ref"/>
+                <field name="product_id"/>
+                <field name="total_rolls" sum="Rolls"/>
+                <field name="total_metres" sum="Total m"/>
+                <field name="state" widget="badge"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_pavu_receipt_form" model="ir.ui.view">
+        <field name="name">textile.pavu.receipt.form</field>
+        <field name="model">textile.pavu.receipt</field>
+        <field name="arch" type="xml">
+            <form string="Pavu Receipt">
+                <header>
+                    <button name="action_receive" string="Receive Pavu"
+                            type="object" class="btn-primary"
+                            invisible="state == 'done'"
+                            confirm="Add this Pavu to godown stock? This cannot be undone."/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,done"/>
+                </header>
+                <sheet>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
+                    <group>
+                        <group string="Receipt">
+                            <field name="date" readonly="state == 'done'"/>
+                            <field name="partner_id" readonly="state == 'done'"/>
+                            <field name="order_ref" readonly="state == 'done'"/>
+                            <field name="vehicle_no" readonly="state == 'done'"/>
+                        </group>
+                        <group string="Pavu">
+                            <field name="product_id" options="{'no_create': True}" readonly="state == 'done'"/>
+                            <field name="total_rolls"/>
+                            <field name="total_metres" class="fs-3 fw-bold"/>
+                            <field name="picking_id"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Roll Lengths">
+                            <field name="line_ids" readonly="state == 'done'">
+                                <list editable="bottom">
+                                    <field name="roll_length"/>
+                                    <field name="number_of_rolls"/>
+                                    <field name="total_metres" sum="Total"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Notes">
+                            <field name="notes" readonly="state == 'done'"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_pavu_receipt_search" model="ir.ui.view">
+        <field name="name">textile.pavu.receipt.search</field>
+        <field name="model">textile.pavu.receipt</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="order_ref"/>
+                <filter name="draft" string="Draft" domain="[('state','=','draft')]"/>
+                <filter name="done" string="Received" domain="[('state','=','done')]"/>
+                <group>
+                    <filter name="by_vendor" string="Vendor" context="{'group_by': 'partner_id'}"/>
+                    <filter name="by_date" string="Month" context="{'group_by': 'date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_pavu_receipt" model="ir.actions.act_window">
+        <field name="name">Pavu Receipts</field>
+        <field name="res_model">textile.pavu.receipt</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="menu_pavu_receipt" name="Pavu Receipts"
+              parent="menu_textile_receipts" action="action_pavu_receipt" sequence="20"/>
+</odoo>

@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
 <odoo>
-
-    <!-- Loom Allocation Location -->
+    <!-- Loom Allocation location.
+         It must be a SIBLING of the godown stock (under the warehouse view
+         location), not a child of it. If it were a child, yarn already on
+         the looms would be counted as available godown stock. -->
     <record id="location_loom_allocation" model="stock.location">
         <field name="name">Loom Allocation</field>
         <field name="usage">internal</field>
-        <field name="location_id" ref="stock.stock_location_stock"/>
+        <field name="location_id"
+               search="[('usage', '=', 'view'), ('warehouse_id', '!=', False), ('location_id', '=', False)]"/>
         <field name="company_id" ref="base.main_company"/>
     </record>
-
 </odoo>
