@@ -65,3 +65,7 @@ cp .env.example .env        # then fill in DOMAIN, DB_NAME and two strong secret
 docker compose up -d
 ./scripts/healthcheck.sh    # every line should say OK
 ```
+
+## License
+
+MIT — see [LICENSE](LICENSE).
